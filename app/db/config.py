@@ -17,8 +17,11 @@ class DatabaseManager:
             return 
 
         self.DATABASE_URL = "sqlite+aiosqlite:///temp.db"
-        self.engine = create_async_engine(self.DATABASE_URL, echo=True)
-        self.Session = async_sessionmaker(bind=self.engine, class_=AsyncSession, expire_on_commit=False)
+        # Cloud database URL (pending Tailscale connection details from Manie)
+        self.CLOUD_DATABASE_URL = "postgresql+asyncpg://user:password@cloud-server-ip:5432/dbname"
+
+        self.engine = create_async_engine(self.DATABASE_URL)
+        self.Session = async_sessionmaker(bind=self.engine)
         self._initialized = True
 
     async def init_db(self):
