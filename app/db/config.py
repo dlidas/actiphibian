@@ -17,11 +17,13 @@ class DatabaseManager:
             return 
 
         self.DATABASE_URL = "sqlite+aiosqlite:///temp.db"
-        # Cloud database URL (pending Tailscale connection details from Manie)
-        self.CLOUD_DATABASE_URL = "postgresql+asyncpg://user:password@cloud-server-ip:5432/dbname"
+        # Cloud database URL (pending connection details from Manie/Daniel)
+        # self.CLOUD_DATABASE_URL = "postgresql+asyncpg://user:password@cloud-server-ip:5432/dbname"
 
-        self.engine = create_async_engine(self.DATABASE_URL)
-        self.Session = async_sessionmaker(bind=self.engine)
+        self.local_engine = create_async_engine(self.DATABASE_URL)
+        # self.cloud_engine = create_async_engine(self.CLOUD_DATABASE_URL)
+        self.local_session = async_sessionmaker(bind=self.local_engine)
+        # self.cloud_Session = async_sessionmaker(bind=self.cloud_engine)
         self._initialized = True
 
     async def init_db(self):
@@ -29,4 +31,4 @@ class DatabaseManager:
             await conn.run_sync(Base.metadata.create_all)
 
     def create_session(self):
-        return self.Session()
+        return self.local_session()
