@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/task.dart';
+import 'package:actiphibian/utils/task_parsers.dart';
+import 'package:actiphibian/utils/task_creation_logger.dart';
 
 class NewTasks extends StatefulWidget {
   @override
@@ -8,6 +10,19 @@ class NewTasks extends StatefulWidget {
 
 class _NewTasksState extends State<NewTasks> {
   final List<Task> _tasks = [];
+  int _nextId = 1; // stand-in identity until SQLite assigns real ids
+
+  String _toStorageDifficulty(String display) => display.toLowerCase();
+  String _toDisplayDifficulty(String stored) {
+    switch (stored) {
+      case 'medium':
+        return 'Medium';
+      case 'hard':
+        return 'Hard';
+      default:
+        return 'Easy';
+    }
+  }
 
   //using dialog methods for CRUD functionality
 
@@ -23,77 +38,95 @@ class _NewTasksState extends State<NewTasks> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Add New Task"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: "Description"),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text("Add New Task"),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: "Description"),
+                    ),
+                    TextField(
+                      controller: subtaskController,
+                      decoration: InputDecoration(
+                        labelText: "Subtasks",
+                        hintText: "wash dishes, buy milk",
+                      ),
+                    ),
+                    TextField(
+                      controller: durationController,
+                      decoration: InputDecoration(labelText: "Duration"),
+                      keyboardType: TextInputType.number,
+                    ),
+                    TextField(
+                      controller: deadlineController,
+                      decoration: InputDecoration(
+                        labelText: "Deadline (YYYY-MM-DD)",
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: Text("Recurring"),
+                      value: recurring,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          recurring = val;
+                        });
+                      },
+                    ),
+                    DropdownButton<String>(
+                      value: difficulty,
+                      items: ["Easy", "Medium", "Hard"]
+                          .map(
+                            (level) => DropdownMenuItem(value: level, child: Text(level)),
+                          )
+                          .toList(),
+                      onChanged: (val) => setDialogState(() => difficulty = val!),
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: subtaskController,
-                  decoration: InputDecoration(labelText: "Subtasks"),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancel"),
                 ),
-                TextField(
-                  controller: durationController,
-                  decoration: InputDecoration(labelText: "Duration"),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: deadlineController,
-                  decoration: InputDecoration(
-                    labelText: "Deadline (YYYY-MM-DD)",
-                  ),
-                ),
-                SwitchListTile(
-                  title: Text("Recurring"),
-                  value: recurring,
-                  onChanged: (val) {
+                ElevatedButton(
+                  onPressed: () async {
+                    final newTask = Task(
+                      id: _nextId++,
+                      description: descriptionController.text,
+                      subtasks: TaskParsers.parseSubtasks(subtaskController.text),
+                      durationMinutes: TaskParsers.parseDuration(durationController.text),
+                      deadline: TaskParsers.parseDeadline(deadlineController.text),
+                      recurring: recurring,
+                      difficulty: _toStorageDifficulty(difficulty),
+                    );
+
                     setState(() {
-                      recurring = val;
+                      //Create
+                      _tasks.add(newTask);
                     });
+
+                    await TaskCreationLogger.logTaskCreated(
+                      title: newTask.description,
+                      subtasksRaw: subtaskController.text,
+                      durationRaw: durationController.text,
+                      deadlineRaw: deadlineController.text,
+                      isRecurring: recurring,
+                      difficulty: difficulty,
+                    );
+                    print(await TaskCreationLogger.readLog());
+
+                    Navigator.pop(context);
                   },
-                ),
-                DropdownButton<String>(
-                  value: difficulty,
-                  items: ["Easy", "Medium", "Hard"]
-                      .map(
-                        (level) =>
-                            DropdownMenuItem(value: level, child: Text(level)),
-                      )
-                      .toList(),
-                  onChanged: (val) => setState(() => difficulty = val!),
+                  child: Text("Add"),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  //Create
-                  _tasks.add(
-                    Task(
-                      description: descriptionController.text,
-                      subtasks: subtaskController.text,
-                      duration: durationController.text,
-                      deadline: deadlineController.text,
-                      recurring: recurring,
-                      difficulty: difficulty,
-                    ),
-                  );
-                });
-                Navigator.pop(context);
-              },
-              child: Text("Add"),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -103,11 +136,17 @@ class _NewTasksState extends State<NewTasks> {
   void _showEditTaskDialog(int index) {
     final task = _tasks[index];
     final descriptionController = TextEditingController(text: task.description);
-    final subtaskController = TextEditingController(text: task.subtasks);
-    final durationController = TextEditingController(text: task.duration);
-    final deadlineController = TextEditingController(text: task.deadline);
+    final subtaskController = TextEditingController(text: task.subtasks.join(', '));
+    final durationController = TextEditingController(
+      text: task.durationMinutes?.toString() ?? '',
+    );
+    final deadlineController = TextEditingController(
+      text: TaskParsers.formatDeadline(task.deadline) == 'No deadline'
+          ? ''
+          : TaskParsers.formatDeadline(task.deadline),
+    );
     bool recurring = task.recurring;
-    String difficulty = task.difficulty;
+    String difficulty = _toDisplayDifficulty(task.difficulty);
 
     showDialog(
       context: context,
@@ -154,8 +193,7 @@ class _NewTasksState extends State<NewTasks> {
                             ),
                           )
                           .toList(),
-                      onChanged: (val) =>
-                          setDialogState(() => difficulty = val!),
+                      onChanged: (val) => setDialogState(() => difficulty = val!),
                     ),
                   ],
                 ),
@@ -168,13 +206,13 @@ class _NewTasksState extends State<NewTasks> {
                 ElevatedButton(
                   onPressed: () {
                     setState(() {
-                      _tasks[index] = Task(
+                      _tasks[index] = task.copyWith(
                         description: descriptionController.text,
-                        subtasks: subtaskController.text,
-                        duration: durationController.text,
-                        deadline: deadlineController.text,
+                        subtasks: TaskParsers.parseSubtasks(subtaskController.text),
+                        durationMinutes: TaskParsers.parseDuration(durationController.text),
+                        deadline: TaskParsers.parseDeadline(deadlineController.text),
                         recurring: recurring,
-                        difficulty: difficulty,
+                        difficulty: _toStorageDifficulty(difficulty),
                       );
                     });
                     Navigator.pop(context);
@@ -191,6 +229,9 @@ class _NewTasksState extends State<NewTasks> {
 
   @override
   Widget build(BuildContext context) {
+
+    final dueTodayCount = _tasks.where((t) => t.isDueToday).length;
+
     return Scaffold(
       body: Column(
         children: [
@@ -206,7 +247,7 @@ class _NewTasksState extends State<NewTasks> {
                 Icon(Icons.today, color: Colors.white, size: 30),
                 SizedBox(width: 10),
                 Text(
-                  "Today's Tasks (${_tasks.length})",
+                  "Today's Tasks ($dueTodayCount)",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -224,16 +265,21 @@ class _NewTasksState extends State<NewTasks> {
                 return ExpansionTile(
                   title: Text(task.description),
                   subtitle: Text(
-                    "Deadline: ${task.deadline}  Difficulty: ${task.difficulty}",
+                    "Deadline: ${TaskParsers.formatDeadline(task.deadline)}  "
+                    "Difficulty: ${_toDisplayDifficulty(task.difficulty)}",
                   ),
                   children: [
                     ListTile(
                       title: Text("Subtasks"),
-                      subtitle: Text(task.subtasks),
+                      subtitle: Text(
+                        task.subtasks.isEmpty ? 'None' : task.subtasks.join(', '),
+                      ),
                     ),
                     ListTile(
                       title: Text("Duration"),
-                      subtitle: Text("${task.duration} hours"),
+                      subtitle: Text(
+                        task.durationMinutes != null ? "${task.durationMinutes} min" : 'Not set',
+                      ),
                     ),
                     ListTile(
                       title: Text("Recurring"),
