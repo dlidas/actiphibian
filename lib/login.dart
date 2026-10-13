@@ -22,7 +22,7 @@ class _LoginPageState extends State<LoginPage> {
             Padding(
               padding: const EdgeInsets.only(top: 110.0),
               child: Center(
-                child: Container(
+                child: SizedBox(
                   width: 200,
                   height: 100,
                   child: Image.asset('assets/images/placeholder-frog-icon.png'),
@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(
               height: 65,
               width: 360,
-              child: Container(
+              child: SizedBox(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: ElevatedButton(
@@ -72,7 +72,10 @@ class _LoginPageState extends State<LoginPage> {
                         context, 
                         MaterialPageRoute(builder: (context) => const MainApp()),
                       );
+                      // ignore: avoid_print
                       print('Login successful.');
+
+                      if (!context.mounted) return;
                     },
                   )
                 ),
@@ -81,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(
               height: 50,
             ),
-            Container(
+            SizedBox(
               child: Center(
                 child: Row(
                   children: [
@@ -93,7 +96,10 @@ class _LoginPageState extends State<LoginPage> {
                       padding: const EdgeInsets.only(left: 1.0),
                       child: InkWell(
                         onTap: () {
+                          // ignore: avoid_print
                           print('hello');
+                          
+                          if (!context.mounted) return;
                         },
                         child: Text(
                           'Get help logging in',

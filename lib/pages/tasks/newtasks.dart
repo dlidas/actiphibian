@@ -4,13 +4,15 @@ import 'package:actiphibian/utils/task_parsers.dart';
 import 'package:actiphibian/utils/task_creation_logger.dart';
 
 class NewTasks extends StatefulWidget {
+  const NewTasks({super.key});
+
   @override
-  _NewTasksState createState() => _NewTasksState();
+  State<NewTasks> createState() => _NewTasksState();
 }
 
 class _NewTasksState extends State<NewTasks> {
   final List<Task> _tasks = [];
-  int _nextId = 1; // stand-in identity until SQLite assigns real ids
+  int _nextId = 1; // stand-in id until SQLite assigns real ids
 
   String _toStorageDifficulty(String display) => display.toLowerCase();
   String _toDisplayDifficulty(String stored) {
@@ -80,10 +82,14 @@ class _NewTasksState extends State<NewTasks> {
                       value: difficulty,
                       items: ["Easy", "Medium", "Hard"]
                           .map(
-                            (level) => DropdownMenuItem(value: level, child: Text(level)),
+                            (level) => DropdownMenuItem(
+                              value: level,
+                              child: Text(level),
+                            ),
                           )
                           .toList(),
-                      onChanged: (val) => setDialogState(() => difficulty = val!),
+                      onChanged: (val) =>
+                          setDialogState(() => difficulty = val!),
                     ),
                   ],
                 ),
@@ -98,9 +104,15 @@ class _NewTasksState extends State<NewTasks> {
                     final newTask = Task(
                       id: _nextId++,
                       description: descriptionController.text,
-                      subtasks: TaskParsers.parseSubtasks(subtaskController.text),
-                      durationMinutes: TaskParsers.parseDuration(durationController.text),
-                      deadline: TaskParsers.parseDeadline(deadlineController.text),
+                      subtasks: TaskParsers.parseSubtasks(
+                        subtaskController.text,
+                      ),
+                      durationMinutes: TaskParsers.parseDuration(
+                        durationController.text,
+                      ),
+                      deadline: TaskParsers.parseDeadline(
+                        deadlineController.text,
+                      ),
                       recurring: recurring,
                       difficulty: _toStorageDifficulty(difficulty),
                     );
@@ -118,7 +130,10 @@ class _NewTasksState extends State<NewTasks> {
                       isRecurring: recurring,
                       difficulty: difficulty,
                     );
-                    print(await TaskCreationLogger.readLog());
+                    // ignore: avoid_print
+                    print(await TaskCreationLogger.readLog(/*...*/));
+
+                    if (!context.mounted) return;
 
                     Navigator.pop(context);
                   },
@@ -136,7 +151,9 @@ class _NewTasksState extends State<NewTasks> {
   void _showEditTaskDialog(int index) {
     final task = _tasks[index];
     final descriptionController = TextEditingController(text: task.description);
-    final subtaskController = TextEditingController(text: task.subtasks.join(', '));
+    final subtaskController = TextEditingController(
+      text: task.subtasks.join(', '),
+    );
     final durationController = TextEditingController(
       text: task.durationMinutes?.toString() ?? '',
     );
@@ -193,7 +210,8 @@ class _NewTasksState extends State<NewTasks> {
                             ),
                           )
                           .toList(),
-                      onChanged: (val) => setDialogState(() => difficulty = val!),
+                      onChanged: (val) =>
+                          setDialogState(() => difficulty = val!),
                     ),
                   ],
                 ),
@@ -208,9 +226,15 @@ class _NewTasksState extends State<NewTasks> {
                     setState(() {
                       _tasks[index] = task.copyWith(
                         description: descriptionController.text,
-                        subtasks: TaskParsers.parseSubtasks(subtaskController.text),
-                        durationMinutes: TaskParsers.parseDuration(durationController.text),
-                        deadline: TaskParsers.parseDeadline(deadlineController.text),
+                        subtasks: TaskParsers.parseSubtasks(
+                          subtaskController.text,
+                        ),
+                        durationMinutes: TaskParsers.parseDuration(
+                          durationController.text,
+                        ),
+                        deadline: TaskParsers.parseDeadline(
+                          deadlineController.text,
+                        ),
                         recurring: recurring,
                         difficulty: _toStorageDifficulty(difficulty),
                       );
@@ -229,7 +253,6 @@ class _NewTasksState extends State<NewTasks> {
 
   @override
   Widget build(BuildContext context) {
-
     final dueTodayCount = _tasks.where((t) => t.isDueToday).length;
 
     return Scaffold(
@@ -272,13 +295,17 @@ class _NewTasksState extends State<NewTasks> {
                     ListTile(
                       title: Text("Subtasks"),
                       subtitle: Text(
-                        task.subtasks.isEmpty ? 'None' : task.subtasks.join(', '),
+                        task.subtasks.isEmpty
+                            ? 'None'
+                            : task.subtasks.join(', '),
                       ),
                     ),
                     ListTile(
                       title: Text("Duration"),
                       subtitle: Text(
-                        task.durationMinutes != null ? "${task.durationMinutes} min" : 'Not set',
+                        task.durationMinutes != null
+                            ? "${task.durationMinutes} min"
+                            : 'Not set',
                       ),
                     ),
                     ListTile(
