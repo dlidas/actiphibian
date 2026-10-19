@@ -5,6 +5,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/user.dart';
 import '../models/task.dart';
+import 'tables.dart';
 
 class LocalDb {
   static Database? _database;
@@ -19,47 +20,19 @@ class LocalDb {
     return _database!;
   }
 
-  static Future<Database> _initialiseDb() async {
-    //users table
-    String usersTableQuery = 
-      'CREATE TABLE users('
-        'id INTEGER PRIMARY KEY, ' 
-        'username TEXT UNIQUE, '
-        'level INTEGER, ' 
-        'xp INTEGER, ' 
-        'balance INTEGER'
-      ');';
-
-    //tasks table
-    String tasksTableQuery = 
-      'CREATE TABLE tasks('
-        'id INTEGER PRIMARY KEY, '
-        'parentId INTEGER, '
-        'description TEXT, '
-        'subtasks TEXT, '
-        'durationMinutes INT, '
-        'deadline TEXT, ' 
-        'recurring BOOLEAN, '
-        'difficulty TEXT, '
-        'status TEXT, '
-        'xpAwarded INT, '
-        'completedAt TEXT, '
-        'habitId INTEGER, '
-        'remoteId INTEGER, '
-        'isSynced BOOLEAN, '
-        // 'createdAt TEXT DEFAULT (datetime("now")), '
-        'createdAt TEXT, '
-        'updatedAt TEXT'
-      ');';    
-
-      //statistics table
-      //TODO: Add
-    
+  static Future<Database> _initialiseDb() async {    
     return await openDatabase(
       join(await getDatabasesPath(), 'actiphibian.db'),
-      onCreate: (db, version) async {
-        await db.execute(usersTableQuery);
-        await db.execute(tasksTableQuery);
+      onCreate: (db, version) async {//Uncomment tables as implemented
+        await db.execute(Tables.users());
+        await db.execute(Tables.tasks());
+        // await db.execute(Tables.tags());
+        // await db.execute(Tables.collection());
+        // await db.execute(Tables.amphibians());
+        // await db.execute(Tables.statistics());
+        // await db.execute(Tables.dailyStatistics());
+        // await db.execute(Tables.weeklyStatistics());
+        // await db.execute(Tables.monthlyStatistics());
       },
       version: 1,
     );
