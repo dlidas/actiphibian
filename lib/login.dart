@@ -12,9 +12,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text("Actiphibian"),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -60,6 +61,14 @@ class _LoginPageState extends State<LoginPage> {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: ElevatedButton(
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.pressed)) {
+                          return Theme.of(context).colorScheme.tertiary;
+                        }
+                        return Theme.of(context).colorScheme.primary;
+                      }),
+                    ),
                     child: Text(
                       'Log in',
                       style: TextStyle(
@@ -72,10 +81,7 @@ class _LoginPageState extends State<LoginPage> {
                         context, 
                         MaterialPageRoute(builder: (context) => const MainApp()),
                       );
-                      // ignore: avoid_print
                       print('Login successful.');
-
-                      if (!context.mounted) return;
                     },
                   )
                 ),
@@ -96,10 +102,7 @@ class _LoginPageState extends State<LoginPage> {
                       padding: const EdgeInsets.only(left: 1.0),
                       child: InkWell(
                         onTap: () {
-                          // ignore: avoid_print
                           print('hello');
-                          
-                          if (!context.mounted) return;
                         },
                         child: Text(
                           'Get help logging in',
