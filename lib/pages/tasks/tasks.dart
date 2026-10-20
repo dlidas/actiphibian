@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'newtasks.dart';
+
 import 'todaystasks.dart';
 
 class TaskPage extends StatelessWidget {
-  const TaskPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,7 +25,7 @@ class TaskPage extends StatelessWidget {
       elevation: 0,
       title: Row(
         children: [
-          SizedBox(
+          Container(
             height: 45,
             width: 45,
             child: ClipRRect(
