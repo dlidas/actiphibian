@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-// // import 'package:table_calendar/table_calendar.dart';
+// //DEPENDENCY
+// //flutter pub add table_calendar 
+
+// import 'package:flutter/material.dart';
+// import 'package:table_calendar/table_calendar.dart';
 // // Imports team's database service for Ovayo's local SQLite DB
-// // import '../services/database_helper.dart';
+// import '../data/repo.dart';
 
 // /// AppTask model matching Daniel's whiteboard specs
 // class AppTask {
@@ -39,14 +42,14 @@ import 'package:flutter/material.dart';
 //   }
 // }
 
-class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key});
+// class CalendarPage extends StatefulWidget {
+//   const CalendarPage({super.key});
 
-  @override
-  State<CalendarPage> createState() => _CalendarPageState();
-}
+//   @override
+//   State<CalendarPage> createState() => _CalendarPageState();
+// }
 
-class _CalendarPageState extends State<CalendarPage> {
+// class _CalendarPageState extends State<CalendarPage> {
 //   DateTime _focusedDay = DateTime.now();
 //   DateTime? _selectedDay = DateTime.now();
   
@@ -71,7 +74,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
 //     try {
 //       // 1. Call Ovayo's DatabaseHelper to query all stored tasks
-//       final List<Map<String, dynamic>> dbRows = await DatabaseHelper.instance.getTasks();
+//       final dbRows = await LocalDb.getTasks();
 
 //       Map<DateTime, List<AppTask>> loadedEvents = {};
 
@@ -101,11 +104,11 @@ class _CalendarPageState extends State<CalendarPage> {
 //     return _events[_normalizeDate(day)] ?? [];
 //   }
 
-  @override
-  Widget build(BuildContext context) {
+//   @override
+//   Widget build(BuildContext context) {
 //     final selectedTasks = _selectedDay != null ? _getTasksForDay(_selectedDay!) : [];
 
-    return Scaffold(
+//     return Scaffold(
 //       appBar: AppBar(
 //         title: const Text('Calendar & Deadlines'),
 //         centerTitle: true,
@@ -242,7 +245,7 @@ class _CalendarPageState extends State<CalendarPage> {
 //           padding: const EdgeInsets.all(24.0),
 //           child: Column(
 //             mainAxisSize: MainAxisSize.min,
-//             crossAxisAlignment: CrossAlignment.start,
+//             crossAxisAlignment: CrossAxisAlignment.start,
 //             children: [
 //               Row(
 //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -305,6 +308,6 @@ class _CalendarPageState extends State<CalendarPage> {
 //           ),
 //         );
 //       },
-    );
-  }
-}
+//     );
+//   }
+// }
