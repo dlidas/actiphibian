@@ -13,7 +13,7 @@ class TodaysTasks extends StatelessWidget {
           width: screenWidth * 0.75,
           margin: EdgeInsets.all(15),
           padding: EdgeInsets.all(20),
-    
+
           decoration: BoxDecoration(
             color: const Color.fromARGB(207, 156, 86, 5),
             borderRadius: BorderRadius.circular(10),
@@ -30,7 +30,7 @@ class TodaysTasks extends StatelessWidget {
                 child: Icon(Icons.circle, color: Colors.white, size: 20),
               ),
               SizedBox(width: 10),
-    
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -1,6 +1,5 @@
-/// This is where the xp calculations live.
-/// It will make it easier for me to change to the exponoential leveling curve later, and it will also make it easier to test the xp calculations in isolation.
-/// I just have basic constant shape right now but the nitty gritty can be fine-tuned.
+import 'dart:math';
+
 class XpCalculator {
   static const Map<String, int> _baseXpByDifficulty = {
     'easy': 10,
@@ -8,40 +7,69 @@ class XpCalculator {
     'hard': 50,
   };
 
-  /// Missing a task costs half of what completing it would have earned.
-  static const double missedPenaltyFactor = 0.5;
-
-  /// Completing early can boost the reward by up to +50%.
   static const double maxEarlyBonus = 0.5;
 
-  /// +5% bonus per full day completed ahead of the deadline, capped at
-  /// maxEarlyBonus above.
   static const double earlyBonusPerDay = 0.05;
+
+  static const int fullRateTasksPerDay = 5;
+
+  static const int reducedRateTasksPerDay = 10;
+
+  static const double reducedRateMultiplier = 0.5;
+
+  static const double tailRateMultiplier = 0.25;
 
   static int baseXp(String difficulty) => _baseXpByDifficulty[difficulty] ?? 10;
 
-  /// XP awarded for completing a task. If there's no deadline, timing
-  /// can't be evaluated, so it just earns its base amount. Completing
-  /// after the deadline  also just earns base, no bonus and no penalty:
-  /// the penalty for being late is handled separately, by the
-  /// missed-task check, not by this function.
-  static int xpForCompletion({
-    required String difficulty,
+  static double dailyMultiplier(int completionsBefore) {
+    if (completionsBefore < fullRateTasksPerDay) return 1.0;
+    if (completionsBefore < reducedRateTasksPerDay) {
+      return reducedRateMultiplier;
+    }
+    return tailRateMultiplier;
+  }
+
+  static int completionsOnDay(
+    Iterable<DateTime> completionTimes,
+    DateTime day,
+  ) {
+    return completionTimes
+        .where(
+          (t) => t.year == day.year && t.month == day.month && t.day == day.day,
+        )
+        .length;
+  }
+
+  static double earlyBonus({
+    required DateTime createdAt,
     DateTime? deadline,
     required DateTime completedAt,
   }) {
-    final base = baseXp(difficulty);
-    if (deadline == null) return base;
-    if (completedAt.isAfter(deadline)) return base;
+    if (deadline == null) return 0.0;
+    if (completedAt.isAfter(deadline)) return 0.0;
 
     final daysEarly = deadline.difference(completedAt).inHours / 24;
-    final bonus = (daysEarly * earlyBonusPerDay).clamp(0.0, maxEarlyBonus);
-    return (base * (1 + bonus)).round();
+    final daysSinceCreation = completedAt.difference(createdAt).inHours / 24;
+    final effectiveDaysEarly = min(daysEarly, daysSinceCreation);
+
+    return (effectiveDaysEarly * earlyBonusPerDay)
+        .clamp(0.0, maxEarlyBonus)
+        .toDouble();
   }
 
-  /// XP deducted from the habit when a task's deadline passes with the
-  /// task still pending (never completed, never cancelled).
-  static int xpPenaltyForMissed(String difficulty) {
-    return (baseXp(difficulty) * missedPenaltyFactor).round();
+  static int xpForCompletion({
+    required String difficulty,
+    required DateTime createdAt,
+    DateTime? deadline,
+    required DateTime completedAt,
+    int completionsToday = 0,
+  }) {
+    final base = baseXp(difficulty);
+    final bonus = earlyBonus(
+      createdAt: createdAt,
+      deadline: deadline,
+      completedAt: completedAt,
+    );
+    return (base * (1 + bonus) * dailyMultiplier(completionsToday)).round();
   }
 }

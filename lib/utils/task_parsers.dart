@@ -1,8 +1,6 @@
 import '../models/task.dart';
-/// Still a work in progress. I have no way to check if the parsing is working as intended until the UI design is done.
-/// Will update with the calander feature integrated in the task screen.
+
 class TaskParsers {
- 
   static List<Subtask> parseSubtasks(String raw) {
     if (raw.trim().isEmpty) return [];
     return raw
@@ -12,6 +10,7 @@ class TaskParsers {
         .map((text) => Subtask(text: text))
         .toList();
   }
+
   static String formatSubtasksForEditing(List<Subtask> subtasks) =>
       subtasks.map((s) => s.text).join(', ');
 
@@ -19,10 +18,17 @@ class TaskParsers {
     if (raw.trim().isEmpty) return null;
     return int.tryParse(raw.trim());
   }
+
   static DateTime? parseDeadline(String raw) {
-    if (raw.trim().isEmpty) return null;
-    return DateTime.tryParse(raw.trim());
+    final text = raw.trim();
+    if (text.isEmpty) return null;
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) return null;
+    final dateOnly = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text);
+    if (!dateOnly) return parsed;
+    return DateTime(parsed.year, parsed.month, parsed.day, 23, 59, 59);
   }
+
   static String formatDeadline(DateTime? date) {
     if (date == null) return 'No deadline';
     final y = date.year.toString().padLeft(4, '0');

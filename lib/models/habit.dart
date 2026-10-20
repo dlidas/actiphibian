@@ -1,13 +1,9 @@
-/// Are you a habit because your a tag? Or are you tag because your a habit?
-/// This is the model for a habit, which is a tag that can be tracked and leveled up. It has a name, total XP, current streak, and created at date. 
-/// It also has methods for converting to and from a map, copying with new values, and calculating level and progress to next level.
-/// That last part is work in progress that I expect I will be clowned on for making it so inefficient.
 class Habit {
   final int? id;
   final String name;
   final int totalXp;
-  final int currentStreak;
   final DateTime createdAt;
+  final int currentStreak;
 
   Habit({
     this.id,
@@ -53,7 +49,6 @@ class Habit {
     );
   }
 
-  /// Linear leveling curve: I'll still keep like this for now. I'll make it exponential this week when I can reliably test out xp gain.
   static int _xpForLevel(int level) => level * 100;
 
   (int level, int xpIntoLevel) _levelInfo() {
@@ -70,8 +65,6 @@ class Habit {
   int get xpIntoCurrentLevel => _levelInfo().$2;
   int get xpNeededForNextLevel => _xpForLevel(level);
 
-  /// 0.0–1.0, for a progress bar widget.
   double get progressToNextLevel =>
       xpNeededForNextLevel == 0 ? 0 : xpIntoCurrentLevel / xpNeededForNextLevel;
 }
-
