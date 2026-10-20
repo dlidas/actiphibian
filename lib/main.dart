@@ -157,7 +157,7 @@ class _MainPageState extends State<MainPage> {
         //COLLECTION
         CollectionPage(),
         //CALENDAR
-        // CalendarPage(),
+        CalendarPage(),
         //PROFILE
         ProfilePage(),
       ][currentPageIndex],

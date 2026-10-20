@@ -1,10 +1,7 @@
-// //DEPENDENCY
-// //flutter pub add table_calendar 
-
-// import 'package:flutter/material.dart';
-// import 'package:table_calendar/table_calendar.dart';
+import 'package:flutter/material.dart';
+// // import 'package:table_calendar/table_calendar.dart';
 // // Imports team's database service for Ovayo's local SQLite DB
-// import '../data/repo.dart';
+// // import '../services/database_helper.dart';
 
 // /// AppTask model matching Daniel's whiteboard specs
 // class AppTask {
@@ -42,14 +39,14 @@
 //   }
 // }
 
-// class CalendarPage extends StatefulWidget {
-//   const CalendarPage({super.key});
+class CalendarPage extends StatefulWidget {
+  const CalendarPage({super.key});
 
-//   @override
-//   State<CalendarPage> createState() => _CalendarPageState();
-// }
+  @override
+  State<CalendarPage> createState() => _CalendarPageState();
+}
 
-// class _CalendarPageState extends State<CalendarPage> {
+class _CalendarPageState extends State<CalendarPage> {
 //   DateTime _focusedDay = DateTime.now();
 //   DateTime? _selectedDay = DateTime.now();
   
@@ -74,7 +71,7 @@
 
 //     try {
 //       // 1. Call Ovayo's DatabaseHelper to query all stored tasks
-//       final dbRows = await LocalDb.getTasks();
+//       final List<Map<String, dynamic>> dbRows = await DatabaseHelper.instance.getTasks();
 
 //       Map<DateTime, List<AppTask>> loadedEvents = {};
 
@@ -104,11 +101,11 @@
 //     return _events[_normalizeDate(day)] ?? [];
 //   }
 
-//   @override
-//   Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
 //     final selectedTasks = _selectedDay != null ? _getTasksForDay(_selectedDay!) : [];
 
-//     return Scaffold(
+    return Scaffold(
 //       appBar: AppBar(
 //         title: const Text('Calendar & Deadlines'),
 //         centerTitle: true,
@@ -245,7 +242,7 @@
 //           padding: const EdgeInsets.all(24.0),
 //           child: Column(
 //             mainAxisSize: MainAxisSize.min,
-//             crossAxisAlignment: CrossAxisAlignment.start,
+//             crossAxisAlignment: CrossAlignment.start,
 //             children: [
 //               Row(
 //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -308,6 +305,6 @@
 //           ),
 //         );
 //       },
-//     );
-//   }
-// }
+    );
+  }
+}
