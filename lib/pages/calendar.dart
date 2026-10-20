@@ -311,3 +311,99 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 }
+
+/// Task Detail popup with Cornelle's UI design
+void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return Align(
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.70,
+          child: Padding(
+            padding: const EdgeInsets.all(0.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: CircleAvatar(
+                    radius: 40,
+                    backgroundImage: AssetImage('assets/work-frog.jpeg'),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D3B00),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Chip(
+                      label: Text(
+                        'Difficulty: ${task.difficulty}',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFFE1F9B9),
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Chip(
+                      label: Text(
+                        'Subtasks: ${task.subtaskCount}',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFFE1F9B9),
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Chip(
+                      label: Text(
+                        'Recurring: ${task.isRecurring ? "Yes" : "No"}',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFFE1F9B9),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
