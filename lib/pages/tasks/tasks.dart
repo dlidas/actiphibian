@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'newtasks.dart';
 
-import 'todaystasks.dart';
-
 class TaskPage extends StatelessWidget {
   const TaskPage({super.key});
 
@@ -14,7 +12,6 @@ class TaskPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TodaysTasks(),
           Expanded(child: NewTasks()),
         ],
       ),
