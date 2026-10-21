@@ -1,3 +1,4 @@
+import 'package:actiphibian/services/gacha.dart';
 import 'package:flutter/material.dart';
 
 class CollectionPage extends StatefulWidget {
@@ -18,7 +19,17 @@ class _CollectionPageState extends State<CollectionPage> {
     await showDialog(context: context, builder: (BuildContext context) {
       return Dialog(
         backgroundColor: Theme.of(context).colorScheme.tertiary,        
-        child: Text('test'),
+        child: Column(
+          children: [
+            ElevatedButton(
+              onPressed: () async {
+                var a = await GachaRoller.roll();
+                print(a);
+              }, 
+              child: const Text('I\'m feeling lucky')
+            ),
+          ]
+        ),
       );
     });
 

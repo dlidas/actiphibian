@@ -56,11 +56,12 @@ class Tables {
 
   static String amphibians() =>
       'CREATE TABLE amphibians('
-      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-      'name TEXT, '
-      'species TEXT, '
-      'description TEXT, '
-      'rarity TEXT'
+        'id INTEGER PRIMARY KEY, '
+        'name TEXT, '
+        'species TEXT, '
+        'description TEXT, '
+        'rarity TEXT, '
+        'file_path TEXT, '
       ');';
 
   static String statistics() =>

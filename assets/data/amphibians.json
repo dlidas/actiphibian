@@ -1,0 +1,34 @@
+[
+    {
+        "id" : 0,
+        "name" : "Red-Eyed Tree Frog",
+        "species" : "Agalychnis callidryas",
+        "description" : "The red-eyed tree frog or red-eyed leaf frog (Agalychnis callidryas) is a species of tree frog in the subfamily Phyllomedusinae native to forests of Central America and northwestern South America. One of the most recognizable frog species, A. callidryas is known for its vibrant coloration, having a bright green body with blue and yellow stripes on the side, a white underside, bright red- to orange-colored feet, and its namesake bright red eyes. Despite these bright colors, the red-eyed tree frog is not poisonous like many other brightly colored amphibians; rather, the colors likely provide camouflage against the greenery of the surrounding jungle, and may also serve to provoke the startle reflex to dissuade predators and allow the frog time to escape.",
+        "rarity" : "common",
+        "file_path" : "red-eyed-tree-frog.png"
+    },
+    {
+        "id" : 1,
+        "name" : "Golden Dart Frog",
+        "species" : "Phyllobates terribilis",
+        "description" : "The golden poison frog (Phyllobates terribilis), also known as the golden dart frog or golden poison arrow frog, is a poison dart frog endemic to the rainforests of Colombia. The golden poison frog has become endangered due to habitat destruction within its naturally limited range. Despite its small size, this frog is considered to be the most poisonous extant animal species on the planet.",
+        "rarity" : "legendary",
+        "file_path" : "golden-dart-frog.png"
+    },
+    {
+        "id" : 2,
+        "name" : "African Bullfrog",
+        "species" : "Pyxicephalus adspersus",
+        "description" : "The African bullfrog (Pyxicephalus adspersus), also known as the giant bullfrog or the South African burrowing frog, is a species of frog in the family Pyxicephalidae. It is also known as the pixie frog due to its scientific name. It is found in Angola, Botswana, Kenya, Malawi, Mozambique, Namibia, South Africa, Tanzania, Uganda, Zambia, Zimbabwe, and possibly the Democratic Republic of the Congo. It has been extirpated from Eswatini. It has long been confused with the edible bullfrog (P. edulis), and species boundaries between them, including exact range limits, are not fully understood. Additionally, P. angusticeps of coastal East Africa only was revalidated as a separate species in 2013.",
+        "rarity" : "uncommon",
+        "file_path" : "african-bull-frog.png"
+    },
+    {
+        "id" : 3,
+        "name" : "Surinam Horned Frog",
+        "species" : "Ceratophrys cornuta",
+        "description" : "The Surinam horned frog (Ceratophrys cornuta), also known as Amazonian horned frog, is a bulky frog measuring up to 20 centimetres (7.9 in) found in the northern part of South America. It has an exceptionally wide mouth, and has horn-like projections above its eyes. Females lay up to 1,000 eggs at a time, and wrap them around aquatic plants. The frog eats other frogs, fish, lizards, and mice. Tadpoles of the Surinam horned frog attack each other (and tadpoles from other species) soon after being hatched. This species was once considered the same species as Ceratophrys ornata. This dispute was later settled because the Surinam Horned frog inhabits a different habitat than its smaller cousin and does not interbreed with it in the wild (but will do so in captivity). This species has been known to prey upon the other species of horned frog, especially the northern race of Ceratophrys ornata.",
+        "rarity" : "rare",
+        "file_path" : "surinam-horned-frog.png"
+    }
+]
