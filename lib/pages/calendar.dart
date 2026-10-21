@@ -279,7 +279,7 @@ void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.70,
           child: Padding(
-            padding: const EdgeInsets.all(0.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,12 +314,6 @@ void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
                       ),
                       backgroundColor: const Color(0xFFE1F9B9),
                     ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
                     Chip(
                       label: Text(
                         'Subtasks: ${task.subtaskCount}',
@@ -330,12 +324,6 @@ void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
                       ),
                       backgroundColor: const Color(0xFFE1F9B9),
                     ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
                     Chip(
                       label: Text(
                         'Recurring: ${task.isRecurring ? "Yes" : "No"}',
@@ -348,10 +336,13 @@ void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
                     ),
                   ],
                 ),
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
                 ),
               ],
             ),
