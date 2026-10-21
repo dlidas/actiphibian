@@ -18,10 +18,9 @@ class User implements IMappable {
     tasks = [];
   }
   
-  User.newUser({
-    required this.username,
-  }) {
-    level = 0;
+  User.newUser() {
+    username = '';
+    level = 1;
     xp = 0;
     balance = 0;
     tasks = [];

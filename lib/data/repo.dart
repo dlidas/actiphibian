@@ -52,10 +52,10 @@ class LocalDb {
     );
   }
 
-  static Future<User?> getUser(String username) async {
+  static Future<User?> getUser(int id) async {
     final db = await database;
 
-    final users = await db.rawQuery('SELECT * FROM users WHERE username = ?', [username]);
+    final users = await db.rawQuery('SELECT * FROM users WHERE id = ?', [id]);
 
     if (users.isEmpty) return null;
 

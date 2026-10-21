@@ -1,13 +1,41 @@
+import 'package:actiphibian/data/repo.dart';
+import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/models/user.dart';
 import 'package:flutter/material.dart';
+// import 'package:path/path.dart';
 import 'login.dart';
 import 'pages/pages.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(Init());
+void main() async {
+  bool isNewUser= true;
+  
+  WidgetsFlutterBinding.ensureInitialized();
+
+  //FOR DEBUGGING: RESETS DATABASE - BE CAREFUL
+  // LocalDb.removeDatabase(); //!
+
+  print('--------------------------------------------');
+  print((await LocalDb.getUsers()).toString());
+
+  if (await LocalDb.getUser(1) != null) {
+    if ((await LocalDb.getUser(1) as User).id != null) {
+      isNewUser = false;
+    }    
+  }
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UserManager(user: User.newUser()),
+      child: Init(isNewUser: isNewUser),
+    )
+  );
 }
 
 class Init extends StatelessWidget {
-  const Init({super.key});
+  final bool isNewUser;
+  
+  const Init({super.key, required this.isNewUser});
   
   @override
   Widget build(BuildContext context) {
@@ -33,7 +61,7 @@ class Init extends StatelessWidget {
         ),
       ),
       // debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      home: isNewUser ? LoginPage() : MainPage(),
     );
   }
 }
@@ -57,6 +85,26 @@ class MainPage extends StatefulWidget {
 //=======================DO NOT TOUCH=============================
 class _MainPageState extends State<MainPage> {
   int currentPageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();    
+  }
+
+  Future<void> _loadUser() async {
+    //Get users from local db
+    List<User> users = await LocalDb.getUsers();
+
+    //Get user from db (with id)
+    User userWithId = users.last;
+
+    if (!mounted) return;
+
+    //Update shared user to include id
+    // Provider.of<UserManager>(context, listen: false).updateUser(userWithId);
+    context.read<UserManager>().updateUser(userWithId);
+  }
 
   @override
   Widget build(BuildContext context) {
