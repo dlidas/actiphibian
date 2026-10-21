@@ -25,22 +25,34 @@ class AppTask {
     this.isRecurring = false,
   });
 
-  /// Factory constructor to parse SQLite Database Map into an AppTask object
-  factory AppTask.fromMap(Map<String, dynamic> map) {
-    DateTime parsedDeadline = DateTime.now();
-    if (map['deadline'] != null) {
-      parsedDeadline =
-          DateTime.tryParse(map['deadline'].toString()) ?? DateTime.now();
-    }
+  /// Factory constructor to parse raw DB dynamic output or Task object into an AppTask
+  factory AppTask.fromMap(dynamic item) {
+    if (item is Map<String, dynamic>) {
+      DateTime parsedDeadline = DateTime.now();
+      if (item['deadline'] != null) {
+        parsedDeadline =
+            DateTime.tryParse(item['deadline'].toString()) ?? DateTime.now();
+      }
 
-    return AppTask(
-      id: map['id']?.toString() ?? '',
-      title: map['title'] ?? map['task_name'] ?? 'Untitled Task',
-      difficulty: map['difficulty'] ?? 'Medium',
-      subtaskCount: map['subtask_count'] ?? map['subtaskCount'] ?? 0,
-      deadline: parsedDeadline,
-      isRecurring: map['is_recurring'] == 1 || map['isRecurring'] == true,
-    );
+      return AppTask(
+        id: item['id']?.toString() ?? '',
+        title: item['title'] ?? item['task_name'] ?? 'Untitled Task',
+        difficulty: item['difficulty'] ?? 'Medium',
+        subtaskCount: item['subtask_count'] ?? item['subtaskCount'] ?? 0,
+        deadline: parsedDeadline,
+        isRecurring: item['is_recurring'] == 1 || item['isRecurring'] == true,
+      );
+    } else {
+      // Handles cases where LocalDb returns actual model objects
+      return AppTask(
+        id: item.id?.toString() ?? '',
+        title: item.title ?? 'Untitled Task',
+        difficulty: item.difficulty ?? 'Medium',
+        subtaskCount: item.subtaskCount ?? 0,
+        deadline: item.deadline ?? DateTime.now(),
+        isRecurring: item.isRecurring ?? false,
+      );
+    }
   }
 }
 
@@ -76,7 +88,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
     try {
       // 1. Call Ovayo's DatabaseHelper to query all stored tasks
-      final List<Map<String, dynamic>> dbRows = await LocalDb.getTasks();
+      final dbRows = await LocalDb.getTasks();
 
       Map<DateTime, List<AppTask>> loadedEvents = {};
 
@@ -270,7 +282,7 @@ void _showTaskDetailBottomSheet(BuildContext context, AppTask task) {
             padding: const EdgeInsets.all(0.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Center(
                   child: CircleAvatar(
