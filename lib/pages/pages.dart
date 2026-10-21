@@ -4,3 +4,5 @@ export 'focus.dart';
 export 'home.dart';
 export 'profile.dart';
 export 'tasks/tasks.dart';
+export 'statistics.dart';
+export 'socials.dart';
