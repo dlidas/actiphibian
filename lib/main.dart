@@ -116,23 +116,23 @@ class _MainPageState extends State<MainPage> {
           child: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.onSecondary, 
             foregroundColor: Theme.of(context).colorScheme.secondary,
-            child: Text('0'),
+            child: Text('${Provider.of<UserManager>(context).user.balance}'),
           ),
-        ), //TODO: Link to data
+        ),
         //LEVEL
         title: Center(
           child: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.secondary, 
             foregroundColor: Theme.of(context).colorScheme.onSecondary,
-            child: Text('1'),
+            child: Text('${Provider.of<UserManager>(context).user.level}'),
           ),
-        ), //TODO: Add
+        ),
         actions: <Widget>[
           //SETTINGS
           IconButton(
             icon: Icon(Icons.settings),
             onPressed: () {
-              //TODO: Implement
+              //TODO: Implement Settings button
             },
           ),
         ],

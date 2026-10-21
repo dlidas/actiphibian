@@ -120,6 +120,11 @@ class _LoginPageState extends State<LoginPage> {
                       //Save user to local db
                       LocalDb.addUser(Provider.of<UserManager>(context, listen: false).user);
 
+                      // User userFromDb = (await LocalDb.getUsers()).last;
+
+                      //Instantiate user's collection table
+                      // LocalDb.addCollection(userFromDb.id!);
+
                       //Send to Home page
                       Navigator.pushReplacement(context, 
                         MaterialPageRoute(builder: (context) => MainApp()));
