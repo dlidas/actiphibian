@@ -104,15 +104,6 @@ class _LoginPageState extends State<LoginPage> {
                         fontSize: 20,
                       ),
                     ),
-<<<<<<< HEAD
-                    onPressed: () {
-                      Navigator.pushReplacement(//TODO: Add login logic
-                        context, 
-                        MaterialPageRoute(builder: (context) => const MainApp()),
-                      );
-                      // ignore: avoid_print
-                      print('Login successful.');
-=======
                     onPressed: () async {
                       //Extract user input
                       setState(() {
@@ -132,7 +123,6 @@ class _LoginPageState extends State<LoginPage> {
                       //Send to Home page
                       Navigator.pushReplacement(context, 
                         MaterialPageRoute(builder: (context) => MainApp()));
->>>>>>> origin/main
                     },
                   )
                 ),

@@ -153,7 +153,7 @@ class Task {
           ? DateTime.parse(map['completedAt'] as String)
           : null,
       habitId: map['habitId'] as int?,
-      remoteId: map['remoteId'] as String?,
+      remoteId: map['remoteId']?.toString(),
       isSynced: (map['isSynced'] as int? ?? 0) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),

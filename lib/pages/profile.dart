@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'collection.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -6,117 +7,117 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: [
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.blueGrey,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            Icon(Icons.person, size: 100),
-
-            const SizedBox(height: 20),
-
-            //Credentials
-            const Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+            child: Column(
               children: [
-                Text(
-                  "Username",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                Text(
-                  "Full name",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            //Streak Box
-            InkWell(
-              child: Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: const Center(
-                  child: Text("Streak Heat Map"),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- Link this box to the stat page ---
-            //Stat Box
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    child: Container(
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(5),
+                // Profile Banner
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: 260,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage(
+                            'assets/images/ProfileBanner.png',
+                          ),
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      child: const Center(
-                        child: Text("Statistics"),
+                    ),
+
+                    CircleAvatar(
+                      radius: 70,
+                      backgroundColor: const Color.fromARGB(255, 171, 228, 114),
+                      child: CircleAvatar(
+                        radius: 55,
+                        backgroundColor: const Color.fromARGB(255, 225, 249, 185),
+                        child: const Icon(
+                          Icons.person,
+                          size: 75,
+                          color: Color.fromARGB(255, 29, 59, 0),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Credentials
+                const Column(
+                  children: [
+                    Text(
+                      "Username",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Streak Box
+                InkWell(
+                  child: Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: const Center(
+                      child: Text("Streak Heat Map",
+                        style: TextStyle(
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
 
-                const SizedBox(width: 8),
+                // Stat Box
+                Row(
+                  children: [
+                    const SizedBox(width: 10),
 
-                // --- Link this box to the collection page ---
-                // Amphibian Collection Box
-                Expanded(
-                  child: InkWell(
-                    child: Container(
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: const Center(
-                        child: Text("Amphibian Collection"),
+                    // Amphibian Collection Box
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CollectionPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Center(
+                            child: Text("Amphibian Collection",
+                              style: TextStyle(
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                  ],
                 ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            //Socials
-            InkWell(
-              child: Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 38, 90, 150),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: const Center(
-                  child: Text("Socials"),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-        )
+                const SizedBox(height: 20),
+              const SizedBox(width: 10),
+            ],
+          )
+        ),
       ),
     );
   }

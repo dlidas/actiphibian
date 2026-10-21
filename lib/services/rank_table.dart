@@ -1,6 +1,5 @@
 class Rank {
   final String name;
-
   /// Total XP a user needs to hold this rank.
   final int minXp;
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/task.dart';
+import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/utils/task_parsers.dart';
 import 'package:actiphibian/utils/task_creation_logger.dart';
 import 'package:actiphibian/services/recurrence.dart';
@@ -22,21 +23,92 @@ class NewTasks extends StatefulWidget {
 
 class _NewTasksState extends State<NewTasks> {
   final List<Task> _tasks = [];
-  int _nextId = 1; // placeholder until SQLite assigns ids
+  final List<Habit> _habits = [];
+  final List<Future<void>> _pendingHabitWrites = [];
+  int _nextHabitId = 1;
+  bool _isLoading = true;
+  String? _habitWriteError;
 
-  // Placeholder habits until they come from the local database.
-  int _nextHabitId = 5;
-  final List<Habit> _habits = [
-    Habit(id: 1, name: 'Academic'),
-    Habit(id: 2, name: 'Health'),
-    Habit(id: 3, name: 'Hygiene'),
-    Habit(id: 4, name: 'Music'),
+  static const List<String> _defaultHabitNames = [
+    'Academic',
+    'Health',
+    'Hygiene',
+    'Music',
   ];
 
   Habit _createHabit(String name) {
+    // The current dialog expects a synchronous callback, so assign a local ID
+    // immediately and queue the matching SQLite write before saving its task.
     final habit = Habit(id: _nextHabitId++, name: name);
-    setState(() => _habits.add(habit));
+    if (mounted) setState(() => _habits.add(habit));
+
+    final write = LocalDb.addHabit(habit)
+        .then<void>((_) {})
+        .catchError((Object error) {
+          _habitWriteError = error.toString();
+        });
+    _pendingHabitWrites.add(write);
     return habit;
+  }
+
+  Future<void> _loadData() async {
+    try {
+      var habits = await LocalDb.getHabits();
+      if (habits.isEmpty) {
+        // Preserve the four built-in choices that the screen already showed.
+        for (var i = 0; i < _defaultHabitNames.length; i++) {
+          await LocalDb.addHabit(
+            Habit(id: i + 1, name: _defaultHabitNames[i]),
+          );
+        }
+        habits = await LocalDb.getHabits();
+      }
+      final tasks = await LocalDb.getTasks();
+      if (!mounted) return;
+
+      setState(() {
+        _habits
+          ..clear()
+          ..addAll(habits);
+        _tasks
+          ..clear()
+          ..addAll(tasks);
+        _nextHabitId = habits.fold<int>(1, (nextId, habit) {
+          final id = habit.id ?? 0;
+          return id >= nextId ? id + 1 : nextId;
+        });
+        _isLoading = false;
+      });
+      _flagNewlyMissedTasks();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _reportDatabaseError('Could not load tasks and habits', error);
+    }
+  }
+
+  Future<void> _waitForPendingHabitWrites() async {
+    final pending = List<Future<void>>.from(_pendingHabitWrites);
+    _pendingHabitWrites.clear();
+    await Future.wait(pending);
+    if (_habitWriteError != null) {
+      final error = _habitWriteError!;
+      _habitWriteError = null;
+      throw StateError('Could not save the new habit: $error');
+    }
+  }
+
+  void _reportDatabaseError(String message, Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$message: $error')),
+    );
+  }
+
+  void _saveTaskSilently(Task task) {
+    LocalDb.updateTask(task).catchError((Object error) {
+      _reportDatabaseError('Could not save task changes', error);
+    });
   }
 
   String _habitName(int? habitId) {
@@ -55,10 +127,12 @@ class _NewTasksState extends State<NewTasks> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _flagNewlyMissedTasks());
+    _loadData();
     _missedCheckTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => _flagNewlyMissedTasks(),
+      (_) {
+        if (!_isLoading) _flagNewlyMissedTasks();
+      },
     );
   }
 
@@ -76,8 +150,7 @@ class _NewTasksState extends State<NewTasks> {
     );
     if (result == null || !mounted) return;
 
-    final newTask = Task(
-      id: _nextId++,
+    final taskDraft = Task(
       description: result.description,
       subtasks: TaskParsers.parseSubtasks(result.subtasksRaw),
       durationMinutes: result.durationMinutes,
@@ -87,6 +160,19 @@ class _NewTasksState extends State<NewTasks> {
       difficulty: result.difficulty,
       habitId: result.habitId,
     );
+
+    late final Task newTask;
+    try {
+      // A task might refer to a habit created inside the same dialog. Make
+      // sure that habit's insert finishes before storing the task.
+      await _waitForPendingHabitWrites();
+      final taskId = await LocalDb.addTask(taskDraft);
+      newTask = taskDraft.copyWith(id: taskId);
+    } catch (error) {
+      _reportDatabaseError('Could not save the task', error);
+      return;
+    }
+    if (!mounted) return;
     setState(() => _tasks.add(newTask));
 
     // Logging is a debug aid and must never block adding a task (web has no filesystem).
@@ -150,9 +236,11 @@ class _NewTasksState extends State<NewTasks> {
 
     final i = _tasks.indexWhere((t) => t.id == task.id);
     if (i == -1) return;
-    setState(() {
-      // An explicit null clears a field (habit, duration, frequency); see Task.copyWith.
-      _tasks[i] = _tasks[i].copyWith(
+
+    try {
+      await _waitForPendingHabitWrites();
+      final updatedTask = _tasks[i].copyWith(
+        // An explicit null clears a field (habit, duration, frequency).
         description: result.description,
         subtasks: TaskParsers.parseSubtasks(result.subtasksRaw),
         durationMinutes: result.durationMinutes,
@@ -162,20 +250,25 @@ class _NewTasksState extends State<NewTasks> {
         difficulty: result.difficulty,
         habitId: result.habitId,
       );
-    });
+      await LocalDb.updateTask(updatedTask);
+      if (!mounted) return;
+      setState(() => _tasks[i] = updatedTask);
+    } catch (error) {
+      _reportDatabaseError('Could not update the task', error);
+    }
   }
 
   void _toggleSubtask(int taskIndex, int subtaskIndex) {
-    setState(() {
-      final task = _tasks[taskIndex];
-      final updatedSubtasks = List<Subtask>.from(task.subtasks);
-      updatedSubtasks[subtaskIndex] =
-          updatedSubtasks[subtaskIndex].copyWith(isDone: !updatedSubtasks[subtaskIndex].isDone);
-      _tasks[taskIndex] = task.copyWith(subtasks: updatedSubtasks);
-    });
+    final task = _tasks[taskIndex];
+    final updatedSubtasks = List<Subtask>.from(task.subtasks);
+    updatedSubtasks[subtaskIndex] = updatedSubtasks[subtaskIndex]
+        .copyWith(isDone: !updatedSubtasks[subtaskIndex].isDone);
+    final updatedTask = task.copyWith(subtasks: updatedSubtasks);
+    setState(() => _tasks[taskIndex] = updatedTask);
+    _saveTaskSilently(updatedTask);
   }
 
-  void _markTaskComplete(int index) {
+  Future<void> _markTaskComplete(int index) async {
     final task = _tasks[index];
     final now = DateTime.now();
     final progressBefore = _progress;
@@ -198,7 +291,6 @@ class _NewTasksState extends State<NewTasks> {
     Task? nextOccurrence;
     if (task.isRecurring && task.deadline != null) {
       nextOccurrence = Task(
-        id: _nextId++,
         description: task.description,
         subtasks: task.subtasks.map((s) => s.copyWith(isDone: false)).toList(),
         durationMinutes: task.durationMinutes,
@@ -213,12 +305,28 @@ class _NewTasksState extends State<NewTasks> {
         habitId: task.habitId,
       );
     }
-    setState(() {
-      _tasks[index] = task.copyWith(
-        status: 'completed',
-        completedAt: now,
-        xpAwarded: xpEarned,
+    final completedTask = task.copyWith(
+      status: 'completed',
+      completedAt: now,
+      xpAwarded: xpEarned,
+    );
+    try {
+      final nextId = await LocalDb.saveTaskCompletion(
+        completedTask,
+        nextOccurrence,
       );
+      if (nextOccurrence != null && nextId != null) {
+        nextOccurrence = nextOccurrence.copyWith(id: nextId);
+      }
+    } catch (error) {
+      _reportDatabaseError('Could not save task completion', error);
+      return;
+    }
+    if (!mounted) return;
+    final currentIndex = _tasks.indexWhere((t) => t.id == task.id);
+    if (currentIndex == -1) return;
+    setState(() {
+      _tasks[currentIndex] = completedTask;
       if (nextOccurrence != null) _tasks.add(nextOccurrence);
     });
     final progressAfter = _progress;
@@ -274,7 +382,7 @@ class _NewTasksState extends State<NewTasks> {
       index = _tasks.indexWhere((t) => t.id == taskId);
       if (index == -1) return;
     }
-    _markTaskComplete(index);
+    await _markTaskComplete(index);
   }
 
   UserProgress get _progress =>
@@ -424,7 +532,7 @@ class _NewTasksState extends State<NewTasks> {
                             label: const Text('Delete', style: TextStyle(color: Colors.red)),
                             onPressed: () {
                               Navigator.pop(sheetContext);
-                              setState(() => _tasks.removeWhere((t) => t.id == taskId));
+                              _deleteTask(taskId);
                             },
                           ),
                       ],
@@ -439,13 +547,31 @@ class _NewTasksState extends State<NewTasks> {
     );
   }
 
-  void _cancelTask(int index) {
-    setState(() {
-      _tasks[index] = _tasks[index].copyWith(status: 'cancelled');
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Task cancelled — no XP lost')),
-    );
+  Future<void> _deleteTask(int taskId) async {
+    try {
+      await LocalDb.deleteTask(taskId);
+      if (!mounted) return;
+      setState(() => _tasks.removeWhere((task) => task.id == taskId));
+    } catch (error) {
+      _reportDatabaseError('Could not delete the task', error);
+    }
+  }
+
+  Future<void> _cancelTask(int index) async {
+    final task = _tasks[index];
+    final updatedTask = task.copyWith(status: 'cancelled');
+    try {
+      await LocalDb.updateTask(updatedTask);
+      if (!mounted) return;
+      final currentIndex = _tasks.indexWhere((item) => item.id == task.id);
+      if (currentIndex == -1) return;
+      setState(() => _tasks[currentIndex] = updatedTask);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task cancelled — no XP lost')),
+      );
+    } catch (error) {
+      _reportDatabaseError('Could not cancel the task', error);
+    }
   }
 
   void _flagNewlyMissedTasks() {
@@ -454,18 +580,24 @@ class _NewTasksState extends State<NewTasks> {
 
     final now = DateTime.now();
     final newlyMissed = <String>[];
+    final updatedTasks = <Task>[];
 
     setState(() {
       for (var i = 0; i < _tasks.length; i++) {
         final task = _tasks[i];
         final isPastDue = task.deadline != null && task.deadline!.isBefore(now);
         if (task.status == 'active' && isPastDue) {
-          _tasks[i] = task.copyWith(status: 'missed');
+          final updatedTask = task.copyWith(status: 'missed');
+          _tasks[i] = updatedTask;
+          updatedTasks.add(updatedTask);
           newlyMissed.add(task.description);
         }
       }
     });
 
+    for (final task in updatedTasks) {
+      _saveTaskSilently(task);
+    }
     if (newlyMissed.isEmpty || !mounted) return;
     final label = newlyMissed.length == 1
         ? '"${newlyMissed.first}" missed its deadline'
@@ -531,7 +663,9 @@ class _NewTasksState extends State<NewTasks> {
     );
 
     return Scaffold(
-      body: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
         children: [
           ProgressHeader(progress: progress),
           Expanded(
@@ -570,7 +704,7 @@ class _NewTasksState extends State<NewTasks> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog,
+        onPressed: _isLoading ? null : _showAddTaskDialog,
         child: const Icon(Icons.add),
       ),
     );
