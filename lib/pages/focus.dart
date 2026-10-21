@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/focus_xp.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -20,11 +21,16 @@ class _FocusPageState extends State<FocusPage> {
   int _minutes = 20;
   int _seconds = 0;
   int _secondsRemaining = 1200; // 20 minutes default
+  int _initialSessionMinutes = 20; // Tracks starting time for Ovayo's calculation
   Timer? _timer;
   bool _isRunning = false;
 
   // Distraction tracking
   int _distractions = 0;
+
+  // User Totals (Simulated for local balance display)
+  int _totalUserXP = 0;
+  int _totalUserCoins = 0;
 
   @override
   void dispose() {
@@ -145,6 +151,7 @@ class _FocusPageState extends State<FocusPage> {
                         setState(() {
                           _minutes = parsedMins;
                           _seconds = parsedSecs;
+                          _initialSessionMinutes = parsedMins > 0 ? parsedMins : 1; // Save starting minutes
                           _secondsRemaining = (parsedMins * 60) + parsedSecs;
                         });
 
@@ -177,9 +184,75 @@ class _FocusPageState extends State<FocusPage> {
         } else {
           _timer?.cancel();
           setState(() => _isRunning = false);
+          _onTimerCompleted(); // Trigger reward calculations when countdown hits 0
         }
       });
     }
+  }
+
+  // Triggered automatically when the timer finishes
+  void _onTimerCompleted() {
+    // 1. Calculate XP using Ovayo's FocusXp service from focus_xp.dart
+    int earnedXP = FocusXp.xpForSession(
+      focusedMinutes: _initialSessionMinutes,
+      focusMinutesToday: 0,
+    );
+
+    // 2. Calculate currency/coins earned (10 XP = 1 Coin)
+    int earnedCoins = (earnedXP / 10).floor();
+
+    // 3. Update user profile totals
+    setState(() {
+      _totalUserXP += earnedXP;
+      _totalUserCoins += earnedCoins;
+    });
+
+    // 4. Show Award Modal Screen (Cornelle's completion UI hook)
+    _showAwardDialog(earnedXP, earnedCoins);
+  }
+
+  void _showAwardDialog(int xpEarned, int coinsEarned) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFE5F8B8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Session Completed! 🎉',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D3B00)),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Earned XP: +$xpEarned XP',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Earned Coins: +$coinsEarned Coins',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              if (_distractions > 0) ...[
+                const SizedBox(height: 8),
+                Text('Distractions logged: $_distractions',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+              ],
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8CC63F),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Claim Rewards', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _logDistraction() {
@@ -213,6 +286,24 @@ class _FocusPageState extends State<FocusPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Display Live Balances
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
+                    label: Text('$_totalUserCoins Coins', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    backgroundColor: const Color(0xFFE5F8B8),
+                  ),
+                  const SizedBox(width: 12),
+                  Chip(
+                    avatar: const Icon(Icons.bolt, color: Colors.orange, size: 18),
+                    label: Text('$_totalUserXP XP', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    backgroundColor: const Color(0xFFE5F8B8),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Text(
                 'Distractions: $_distractions',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
