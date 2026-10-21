@@ -1,0 +1,26 @@
+name: actiphibian
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  sqflite: ^2.4.4+2
+  table_calendar: ^3.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  assets:
+    - assets/images/
+  uses-material-design: true
