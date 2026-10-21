@@ -1,5 +1,9 @@
+import 'package:actiphibian/data/repo.dart';
+import 'package:actiphibian/data/userManager.dart';
 import 'package:flutter/material.dart';
 import 'main.dart';
+import 'models/user.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,6 +13,10 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  String _username = '';
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: <Widget>[
+            //Icon
             Padding(
               padding: const EdgeInsets.only(top: 110.0),
               child: Center(
@@ -30,30 +39,49 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
+
+            //Welcome message
+            Padding(
+              padding: EdgeInsetsGeometry.symmetric(horizontal: 15),
+              child: Text(
+                'Welcome!',
+                style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontSize: 50,
+                      ),
+              ),
+            ),
+
+            //Username input
             Padding(
               padding: EdgeInsetsGeometry.symmetric(horizontal: 15),
               child: TextField(
+                controller: _usernameController,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Username',
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 15.0, 
-                right: 15.0, 
-                top: 15.0, 
-                bottom: 0,
-              ),
-              child: TextField(
-                obscureText: true,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Password',
-                ),
-              ),
-            ),
+
+            //Password input
+            // Padding(
+            //   padding: const EdgeInsets.only(
+            //     left: 15.0, 
+            //     right: 15.0, 
+            //     top: 15.0, 
+            //     bottom: 0,
+            //   ),
+            //   child: TextField(
+            //     obscureText: true,
+            //     decoration: InputDecoration(
+            //       border: OutlineInputBorder(),
+            //       labelText: 'Password',
+            //     ),
+            //   ),
+            // ),
+
+            //Login button
             SizedBox(
               height: 65,
               width: 360,
@@ -70,26 +98,43 @@ class _LoginPageState extends State<LoginPage> {
                       }),
                     ),
                     child: Text(
-                      'Log in',
+                      'Get Started',
                       style: TextStyle(
                         color: Color(0xFF1D3B00),
                         fontSize: 20,
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(//TODO: Add login logic
-                        context, 
-                        MaterialPageRoute(builder: (context) => const MainApp()),
-                      );
-                      print('Login successful.');
+                    onPressed: () async {
+                      //Extract user input
+                      setState(() {
+                        _username = _usernameController.text;
+                      });
+
+                      //Create user model with given username
+                      User user = User.newUser();
+                      user.username = _username;
+
+                      // //Update shared user
+                      Provider.of<UserManager>(context, listen: false).updateUser(user);
+
+                      //Save user to local db
+                      LocalDb.addUser(Provider.of<UserManager>(context, listen: false).user);
+
+                      //Send to Home page
+                      Navigator.pushReplacement(context, 
+                        MaterialPageRoute(builder: (context) => MainApp()));
                     },
                   )
                 ),
               ),
             ),
+
+            //Spacing
             SizedBox(
               height: 50,
             ),
+
+            //Forgot password
             // SizedBox(
             //   child: Center(
             //     child: Row(
