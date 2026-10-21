@@ -34,13 +34,24 @@ void main() async {
 
 class Init extends StatelessWidget {
   final bool isNewUser;
+  
   const Init({super.key, required this.isNewUser});
-
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Actiphibian',
+      //===========THEME=================
       theme: ThemeData(
         colorScheme: ColorScheme(
+          primary: Color(0xFFABE472),
+          onPrimary: Color(0xFF1D3B00),
+          secondary: Color(0xFFE1F9B9),
+          onSecondary: Color(0xFF1D3B00),
+          tertiary: Color(0xFFEA9814),
+          onTertiary: Colors.black,
+          surface: Color(0xFFE6FFFA),
+          onSurface: Colors.black,
           error: Colors.red,
           onError: Colors.white,
           brightness: Brightness.light,
