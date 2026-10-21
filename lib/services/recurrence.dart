@@ -1,5 +1,6 @@
-/// A recurring task keeps its next due date as its deadline. Completing it records the completion and creates the next
-///  occurrence as a new task, so each completion earns its own XP. Cancelling or deleting it ends the series.
+/// A recurring task keeps its next due date as its deadline. Completing it records the completion
+/// and creates the next occurrence as a new task, so each completion earns its own XP.
+/// Cancelling or deleting it ends the series.
 class Recurrence {
   static const List<String> frequencies = [
     'daily',
@@ -87,6 +88,8 @@ class Recurrence {
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+  /// The first repeat whose date is after both the due date and the completion date: no second one
+  /// due today, nothing re-scheduled when finished early, no backlog when left for weeks.
   static DateTime nextAfterCompletion({
     required DateTime deadline,
     required String frequency,

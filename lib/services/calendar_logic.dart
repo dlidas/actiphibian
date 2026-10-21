@@ -26,11 +26,10 @@ class CalendarSnippet {
 class CalendarLogic {
   static DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// Still not tested but am aiming to ensure a way for the app to not be affected by daylight-saving time shifts.
-  /// Will remove if not necessary since I would need to seperate storage of time from its presentation
+  /// Six Monday-first weeks. DateTime(y, m, d + i) rolls over month ends and ignores daylight-saving shifts.
   static List<DateTime> monthGrid(DateTime month) {
     final first = DateTime(month.year, month.month, 1);
-    final offset = first.weekday - DateTime.monday;
+    final offset = first.weekday - DateTime.monday; // 0 (Mon) .. 6 (Sun)
     return List<DateTime>.generate(
       42,
       (i) => DateTime(first.year, first.month, 1 - offset + i),
@@ -38,9 +37,10 @@ class CalendarLogic {
   }
 
   /// Finished and cancelled tasks are removed; a missed task stays because it can still be completed.
-  static bool isOnCalendar(Task task) =>
-      task.status == 'active' || task.status == 'missed';
+  static bool isOnCalendar(Task task) => task.status == 'active' || task.status == 'missed';
 
+  /// Entries grouped by day for rangeStart..rangeEnd. Recurring tasks add each repeat in the range, but only
+  /// from today onward, so an old daily task doesn't fill the past days.
   static Map<DateTime, List<CalendarEntry>> entriesByDay(
     Iterable<Task> tasks, {
     required DateTime rangeStart,
@@ -53,9 +53,7 @@ class CalendarLogic {
     final map = <DateTime, List<CalendarEntry>>{};
 
     void add(Task task, DateTime due) {
-      map
-          .putIfAbsent(dayOf(due), () => <CalendarEntry>[])
-          .add(CalendarEntry(task, due));
+      map.putIfAbsent(dayOf(due), () => <CalendarEntry>[]).add(CalendarEntry(task, due));
     }
 
     for (final task in tasks) {
@@ -70,9 +68,7 @@ class CalendarLogic {
         while (true) {
           final due = Recurrence.occurrenceAt(deadline, frequency, n);
           if (dayOf(due).isAfter(end)) break;
-          if (!dayOf(due).isBefore(start) && !dayOf(due).isBefore(todayStart)) {
-            add(task, due);
-          }
+          if (!dayOf(due).isBefore(start) && !dayOf(due).isBefore(todayStart)) add(task, due);
           n++;
         }
       }
@@ -81,14 +77,13 @@ class CalendarLogic {
     for (final list in map.values) {
       list.sort((a, b) {
         final byTime = a.due.compareTo(b.due);
-        return byTime != 0
-            ? byTime
-            : a.task.description.compareTo(b.task.description);
+        return byTime != 0 ? byTime : a.task.description.compareTo(b.task.description);
       });
     }
     return map;
   }
 
+  /// -1 means no habit (drawn grey).
   static int habitColorIndex(int? habitId, int paletteSize) {
     if (habitId == null || paletteSize <= 0) return -1;
     return habitId.abs() % paletteSize;
@@ -109,6 +104,7 @@ class CalendarLogic {
     return h == 0 ? dayText : '$dayText $h h';
   }
 
+  /// [due] is a recurring repeat's own due time; defaults to the task's deadline.
   static String deadlineText(Task task, DateTime now, {DateTime? due}) {
     if (task.status == 'completed') return 'Completed';
     if (task.status == 'cancelled') return 'Cancelled';
@@ -119,13 +115,10 @@ class CalendarLogic {
     return 'Due in ${spanLabel(diff)}';
   }
 
-  static CalendarSnippet snippet(Task task, DateTime now, {DateTime? due}) =>
-      CalendarSnippet(
+  static CalendarSnippet snippet(Task task, DateTime now, {DateTime? due}) => CalendarSnippet(
         title: task.description.isEmpty ? '(untitled task)' : task.description,
         deadlineText: deadlineText(task, now, due: due),
-        subtaskText: task.hasSubtasks
-            ? TaskLabels.subtaskLabel(task)
-            : 'No subtasks',
+        subtaskText: task.hasSubtasks ? TaskLabels.subtaskLabel(task) : 'No subtasks',
         difficultyText: TaskLabels.difficultyLabel(task.difficulty),
       );
 }

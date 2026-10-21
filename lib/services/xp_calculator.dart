@@ -8,17 +8,11 @@ class XpCalculator {
   };
 
   static const double maxEarlyBonus = 0.5;
-
   static const double earlyBonusPerDay = 0.05;
-
   static const int fullRateTasksPerDay = 5;
-
   static const int reducedRateTasksPerDay = 10;
-
   static const double reducedRateMultiplier = 0.5;
-
   static const double tailRateMultiplier = 0.25;
-
   static int baseXp(String difficulty) => _baseXpByDifficulty[difficulty] ?? 10;
 
   static double dailyMultiplier(int completionsBefore) {

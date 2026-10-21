@@ -81,6 +81,7 @@ class _LoginPageState extends State<LoginPage> {
                         context, 
                         MaterialPageRoute(builder: (context) => const MainApp()),
                       );
+                      // ignore: avoid_print
                       print('Login successful.');
                     },
                   )

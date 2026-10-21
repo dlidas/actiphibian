@@ -9,7 +9,11 @@ class TaskFormErrors {
       description != null || deadline != null || frequency != null;
 }
 
+/// Required: description, and a deadline unless the task is recurring (then a frequency instead).
+/// Everything else is optional; a missing habit only triggers a notice after the task is added.
 class TaskFormValidator {
+  /// checkPast is false when editing an overdue task without changing its deadline, so the old
+  /// deadline doesn't block the save.
   static TaskFormErrors validate({
     required String description,
     required DateTime? deadline,

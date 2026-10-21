@@ -95,6 +95,8 @@ class TaskLabels {
     return parts.join(' · ');
   }
 
+  /// Due today or completed today (finishing early still counts); cancelled never counts.
+  /// Shared by the list split and the "N of M complete" count so the two always agree.
   static bool isTodaysTask(Task task, DateTime now) {
     if (task.status == 'cancelled') return false;
     final completedToday =

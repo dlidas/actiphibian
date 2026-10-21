@@ -14,7 +14,7 @@ class RankTable {
     Rank('Tree Frog', 500),
     Rank('Bullfrog', 1200),
     Rank('Golden Frog', 2500),
-    Rank('Glass Frog', 5000),
+    Rank('Diamond Frog', 5000),
     Rank('Axolotl', 10000),
   ];
 

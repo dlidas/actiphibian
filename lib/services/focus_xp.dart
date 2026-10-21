@@ -1,5 +1,4 @@
 import 'package:actiphibian/models/focus_session.dart';
-import 'package:actiphibian/services/study_methods.dart';
 
 /// To stop user from spamming focus to just earn xp for coins, focus session have cap limit on how much xp they can earn.
 /// There's a minimum focus time they must have for them to even earn xp.
@@ -8,7 +7,7 @@ import 'package:actiphibian/services/study_methods.dart';
 
 class FocusXp {
   static const int minutesPerXp = 3;
-  static const int minSessionMinutes = 10;
+  static const int minSessionMinutes = 5;
   static const int dailyCapMinutes = 120;
 
   static int focusMinutesOnDay(Iterable<FocusSession> sessions, DateTime day) {
@@ -23,7 +22,6 @@ class FocusXp {
   }
 
   static int xpForSession({
-    required StudyMethod method,
     required int focusedMinutes,
     int focusMinutesToday = 0,
   }) {
@@ -31,6 +29,6 @@ class FocusXp {
     final remaining = dailyCapMinutes - focusMinutesToday;
     if (remaining <= 0) return 0;
     final credited = focusedMinutes < remaining ? focusedMinutes : remaining;
-    return ((credited ~/ minutesPerXp) * method.xpMultiplier).round();
+    return credited ~/ minutesPerXp;
   }
 }

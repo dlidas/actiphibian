@@ -1,5 +1,5 @@
 class GachaEconomy {
-  static const int xpPerCoin = 4;
+  static const int xpPerCoin = 1;
 
   static const int singlePullCost = 50;
   static const int tenPlusOneCost = 500;
