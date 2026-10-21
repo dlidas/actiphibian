@@ -1,14 +1,37 @@
 import 'dart:convert';
 
+/// Check sub-task
+class Subtask {
+  final String text;
+  final bool isDone;
+
+  const Subtask({required this.text, this.isDone = false});
+
+  Subtask copyWith({String? text, bool? isDone}) {
+    return Subtask(text: text ?? this.text, isDone: isDone ?? this.isDone);
+  }
+
+  Map<String, dynamic> toMap() => {'text': text, 'isDone': isDone};
+
+  factory Subtask.fromMap(Map<String, dynamic> map) => Subtask(
+    text: map['text'] as String,
+    isDone: map['isDone'] as bool? ?? false,
+  );
+}
+
+/// status is 'active' | 'completed' | 'missed' | 'cancelled'
 class Task {
   final int? id;
   final String description;
-  final List<String> subtasks;
+  final List<Subtask> subtasks;
   final int? durationMinutes;
   final DateTime? deadline;
   final bool recurring;
+  final String? recurrenceFrequency;
   final String difficulty;
-  final String status; // "active" | "completed" | "missed" | "cancelled"
+  // Optional rating given after completing; null means the user skipped it.
+  final String? perceivedDifficulty;
+  final String status;
   final int xpAwarded;
   final DateTime? completedAt;
   final int? habitId;
@@ -24,7 +47,9 @@ class Task {
     this.durationMinutes,
     this.deadline,
     required this.recurring,
+    this.recurrenceFrequency,
     required this.difficulty,
+    this.perceivedDifficulty,
     this.status = 'active',
     this.xpAwarded = 0,
     this.completedAt,
@@ -36,18 +61,22 @@ class Task {
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
+  static const Object _unset = Object();
+
   Task copyWith({
     int? id,
     String? description,
-    List<String>? subtasks,
-    int? durationMinutes,
-    DateTime? deadline,
+    List<Subtask>? subtasks,
+    Object? durationMinutes = _unset, // int?
+    Object? deadline = _unset, // DateTime?
     bool? recurring,
+    Object? recurrenceFrequency = _unset, // String?
     String? difficulty,
+    String? perceivedDifficulty,
     String? status,
     int? xpAwarded,
     DateTime? completedAt,
-    int? habitId,
+    Object? habitId = _unset, // int?
     String? remoteId,
     bool? isSynced,
     DateTime? updatedAt,
@@ -56,14 +85,22 @@ class Task {
       id: id ?? this.id,
       description: description ?? this.description,
       subtasks: subtasks ?? this.subtasks,
-      durationMinutes: durationMinutes ?? this.durationMinutes,
-      deadline: deadline ?? this.deadline,
+      durationMinutes: identical(durationMinutes, _unset)
+          ? this.durationMinutes
+          : durationMinutes as int?,
+      deadline: identical(deadline, _unset)
+          ? this.deadline
+          : deadline as DateTime?,
       recurring: recurring ?? this.recurring,
+      recurrenceFrequency: identical(recurrenceFrequency, _unset)
+          ? this.recurrenceFrequency
+          : recurrenceFrequency as String?,
       difficulty: difficulty ?? this.difficulty,
+      perceivedDifficulty: perceivedDifficulty ?? this.perceivedDifficulty,
       status: status ?? this.status,
       xpAwarded: xpAwarded ?? this.xpAwarded,
       completedAt: completedAt ?? this.completedAt,
-      habitId: habitId ?? this.habitId,
+      habitId: identical(habitId, _unset) ? this.habitId : habitId as int?,
       remoteId: remoteId ?? this.remoteId,
       isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt,
@@ -71,16 +108,17 @@ class Task {
     );
   }
 
-  // Mapping to the SQlite [not wired it]
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'description': description,
-      'subtasks': jsonEncode(subtasks),
+      'subtasks': jsonEncode(subtasks.map((s) => s.toMap()).toList()),
       'durationMinutes': durationMinutes,
       'deadline': deadline?.toIso8601String(),
       'recurring': recurring ? 1 : 0,
+      'recurrenceFrequency': recurrenceFrequency,
       'difficulty': difficulty,
+      'perceivedDifficulty': perceivedDifficulty,
       'status': status,
       'xpAwarded': xpAwarded,
       'completedAt': completedAt?.toIso8601String(),
@@ -97,26 +135,32 @@ class Task {
       id: map['id'] as int?,
       description: map['description'] as String,
       subtasks: map['subtasks'] != null
-          ? List<String>.from(jsonDecode(map['subtasks'] as String) as List)
+          ? (jsonDecode(map['subtasks'] as String) as List)
+                .map((m) => Subtask.fromMap(m as Map<String, dynamic>))
+                .toList()
           : const [],
       durationMinutes: map['durationMinutes'] as int?,
       deadline: map['deadline'] != null
           ? DateTime.parse(map['deadline'] as String)
           : null,
       recurring: (map['recurring'] as int) == 1,
+      recurrenceFrequency: map['recurrenceFrequency'] as String?,
       difficulty: map['difficulty'] as String,
+      perceivedDifficulty: map['perceivedDifficulty'] as String?,
       status: map['status'] as String? ?? 'active',
       xpAwarded: map['xpAwarded'] as int? ?? 0,
       completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'] as String)
           : null,
       habitId: map['habitId'] as int?,
-      remoteId: map['remoteId'] as String?,
+      remoteId: map['remoteId']?.toString(),
       isSynced: (map['isSynced'] as int? ?? 0) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
   }
+
+  bool get isRecurring => recurring && recurrenceFrequency != null;
 
   bool get isDueToday {
     if (deadline == null) return false;
@@ -130,4 +174,12 @@ class Task {
     if (deadline == null || status != 'active') return false;
     return deadline!.isBefore(DateTime.now());
   }
+
+  bool get hasSubtasks => subtasks.isNotEmpty;
+  int get subtasksTotalCount => subtasks.length;
+  int get subtasksCompletedCount => subtasks.where((s) => s.isDone).length;
+
+  double get subtaskProgress => subtasksTotalCount == 0
+      ? 1.0
+      : subtasksCompletedCount / subtasksTotalCount;
 }

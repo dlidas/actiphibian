@@ -29,6 +29,7 @@ class TaskCreationLogger {
     return await file.readAsString();
   }
 
+
   static Future<void> clearLog() async {
     final file = await _getLogFile();
     if (await file.exists()) await file.delete();

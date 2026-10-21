@@ -1,147 +1,125 @@
-class Tables {  
-  //users table
-  static String users() {
-    String usersTableQuery = 
+class Tables {
+  static String users() =>
       'CREATE TABLE users('
-        'id INTEGER PRIMARY KEY, ' 
-        'username TEXT UNIQUE, '
-        'level INTEGER, ' 
-        'xp INTEGER, ' 
-        'balance INTEGER'
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'username TEXT UNIQUE, '
+      'level INTEGER, '
+      'xp INTEGER, '
+      'balance INTEGER'
       ');';
-    return usersTableQuery;
-  }
 
-  //tasks table
-  static String tasks() {
-    String tasksTableQuery = 
+  // Habits are stored independently so tasks can refer to a habit by ID.
+  static String habits() =>
+      'CREATE TABLE IF NOT EXISTS habits('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'name TEXT NOT NULL, '
+      'totalXp INTEGER NOT NULL DEFAULT 0, '
+      'currentStreak INTEGER NOT NULL DEFAULT 0, '
+      'createdAt TEXT NOT NULL'
+      ');';
+
+  // Keep these column names in sync with Task.toMap()/Task.fromMap().
+  static String tasks() =>
       'CREATE TABLE tasks('
-        'id INTEGER PRIMARY KEY, '
-        'parentId INTEGER, '
-        'description TEXT, '
-        'subtasks TEXT, '
-        'durationMinutes INT, '
-        'deadline TEXT, ' 
-        'recurring BOOLEAN, '
-        'difficulty TEXT, '
-        'status TEXT, '
-        'xpAwarded INT, '
-        'completedAt TEXT, '
-        'habitId INTEGER, '
-        'remoteId INTEGER, '
-        'isSynced BOOLEAN, '
-        // 'createdAt TEXT DEFAULT (datetime("now")), '
-        'createdAt TEXT, '
-        'updatedAt TEXT'
-      ');'; 
-    return tasksTableQuery;
-  } 
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'description TEXT NOT NULL, '
+      'subtasks TEXT NOT NULL DEFAULT \'[]\', '
+      'durationMinutes INTEGER, '
+      'deadline TEXT, '
+      'recurring INTEGER NOT NULL DEFAULT 0, '
+      'recurrenceFrequency TEXT, '
+      'difficulty TEXT NOT NULL, '
+      'perceivedDifficulty TEXT, '
+      'status TEXT NOT NULL DEFAULT \'active\', '
+      'xpAwarded INTEGER NOT NULL DEFAULT 0, '
+      'completedAt TEXT, '
+      'habitId INTEGER, '
+      'remoteId TEXT, '
+      'isSynced INTEGER NOT NULL DEFAULT 0, '
+      'createdAt TEXT NOT NULL, '
+      'updatedAt TEXT NOT NULL'
+      ');';
 
-  //tags table
-  static String tags() {
-    String tagsQuery =
+  // Fix the trailing comma in the previous tags schema so a new DB can open.
+  static String tags() =>
       'CREATE TABLE tags('
-        'id INTEGER PRIMARY KEY, '
-        'user_id INTEGER, '
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'user_id INTEGER'
       ');';
-    return tagsQuery;
-  }
 
-  //collection table
-  static String collection() {
-    String collectionQuery =
+  static String collection() =>
       'CREATE TABLE collection('
-        'id INTEGER PRIMARY KEY, '
-        'user_id INTEGER, '
-        'amphibian_count INTEGER, '
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'user_id INTEGER, '
+      'amphibian_count INTEGER'
       ');';
-    return collectionQuery;
-  }
 
-  //amphibian table
-  static String amphibians() {
-    String amphibiansQuery =
+  static String amphibians() =>
       'CREATE TABLE amphibians('
-        'id INTEGER PRIMARY KEY, '
-        'name TEXT, '
-        'species TEXT, '
-        'description TEXT, '
-        'rarity TEXT, '
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'name TEXT, '
+      'species TEXT, '
+      'description TEXT, '
+      'rarity TEXT'
       ');';
-    return amphibiansQuery;
-  }
 
-  //statistics tables
-  static String statistics() {
-    String statisticsTableQuery = 
+  static String statistics() =>
       'CREATE TABLE statistics('
-        'id INTEGER PRIMARY KEY, '
-        'tasks_completed INTEGER, '
-        'tasks_incomlete INTEGER, '
-        'hours_focused REAL, '
-        'times_distracted INTEGER, '
-        'total_currency_earned INTEGER, '
-        'total_currency_spent INTEGER, '
-        'total_xp_gained INTEGER, '
-        'total_amphibians_collected INTEGER, '
-        'longest_streak INTEGER, '
-        'user_id INTEGER, '
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'tasks_completed INTEGER, '
+      'tasks_incomlete INTEGER, '
+      'hours_focused REAL, '
+      'times_distracted INTEGER, '
+      'total_currency_earned INTEGER, '
+      'total_currency_spent INTEGER, '
+      'total_xp_gained INTEGER, '
+      'total_amphibians_collected INTEGER, '
+      'longest_streak INTEGER, '
+      'user_id INTEGER'
       ');';
-    return statisticsTableQuery;
-  }
-      
-  static String monthlyStatistics() {
-    String monthlyStatisticsTableQuery = 
+
+  static String monthlyStatistics() =>
       'CREATE TABLE monthly_statistics('
-        'id INTEGER PRIMARY KEY, '
-        'statistics_id INTEGER, '
-        'tasks_completed INTEGER, '
-        'tasks_incomlete INTEGER, '
-        'hours_focused REAL, '
-        'times_distracted INTEGER, '
-        'currency_earned INTEGER, '
-        'currency_spent INTEGER, '
-        'xp_gained INTEGER, '
-        'amphibians_collected INTEGER, '
-        'streak INTEGER, '
-      ');';   
-    return monthlyStatisticsTableQuery;
-  }
-     
-  static String weeklyStatistics() {
-    String weeklyStatisticsTableQuery = 
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'statistics_id INTEGER, '
+      'tasks_completed INTEGER, '
+      'tasks_incomlete INTEGER, '
+      'hours_focused REAL, '
+      'times_distracted INTEGER, '
+      'currency_earned INTEGER, '
+      'currency_spent INTEGER, '
+      'xp_gained INTEGER, '
+      'amphibians_collected INTEGER, '
+      'streak INTEGER'
+      ');';
+
+  static String weeklyStatistics() =>
       'CREATE TABLE weekly_statistics('
-        'id INTEGER PRIMARY KEY, '
-        'statistics_id INTEGER, '
-        'tasks_completed INTEGER, '
-        'tasks_incomlete INTEGER, '
-        'hours_focused REAL, '
-        'times_distracted INTEGER, '
-        'currency_earned INTEGER, '
-        'currency_spent INTEGER, '
-        'xp_gained INTEGER, '
-        'amphibians_collected INTEGER, '
-        'streak INTEGER, '
-      ');'; 
-    return weeklyStatisticsTableQuery;
-  }
-    
-  static String dailyStatistics() {
-    String dailyStatisticsTableQuery = 
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'statistics_id INTEGER, '
+      'tasks_completed INTEGER, '
+      'tasks_incomlete INTEGER, '
+      'hours_focused REAL, '
+      'times_distracted INTEGER, '
+      'currency_earned INTEGER, '
+      'currency_spent INTEGER, '
+      'xp_gained INTEGER, '
+      'amphibians_collected INTEGER, '
+      'streak INTEGER'
+      ');';
+
+  static String dailyStatistics() =>
       'CREATE TABLE daily_statistics('
-        'id INTEGER PRIMARY KEY, '
-        'statistics_id INTEGER, '
-        'tasks_completed INTEGER, '
-        'tasks_incomlete INTEGER, '
-        'hours_focused REAL, '
-        'times_distracted INTEGER, '
-        'currency_earned INTEGER, '
-        'currency_spent INTEGER, '
-        'xp_gained INTEGER, '
-        'amphibians_collected INTEGER, '
-        'streak INTEGER, '
-      ');'; 
-    return dailyStatisticsTableQuery;
-  }
-    
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'statistics_id INTEGER, '
+      'tasks_completed INTEGER, '
+      'tasks_incomlete INTEGER, '
+      'hours_focused REAL, '
+      'times_distracted INTEGER, '
+      'currency_earned INTEGER, '
+      'currency_spent INTEGER, '
+      'xp_gained INTEGER, '
+      'amphibians_collected INTEGER, '
+      'streak INTEGER'
+      ');';
 }

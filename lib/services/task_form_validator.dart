@@ -1,0 +1,51 @@
+class TaskFormErrors {
+  final String? description;
+  final String? deadline;
+  final String? frequency;
+
+  const TaskFormErrors({this.description, this.deadline, this.frequency});
+
+  bool get hasErrors =>
+      description != null || deadline != null || frequency != null;
+}
+
+/// Required: description, and a deadline unless the task is recurring (then a frequency instead).
+/// Everything else is optional; a missing habit only triggers a notice after the task is added.
+class TaskFormValidator {
+  /// checkPast is false when editing an overdue task without changing its deadline, so the old
+  /// deadline doesn't block the save.
+  static TaskFormErrors validate({
+    required String description,
+    required DateTime? deadline,
+    required bool recurring,
+    required String? frequency,
+    required DateTime now,
+    bool checkPast = true,
+  }) {
+    String? descriptionError;
+    String? deadlineError;
+    String? frequencyError;
+
+    if (description.trim().isEmpty) {
+      descriptionError = 'Give the task a description';
+    }
+
+    if (recurring && frequency == null) {
+      frequencyError = 'Choose how often it repeats';
+    }
+
+    if (deadline == null) {
+      if (!recurring) deadlineError = 'Pick a deadline';
+    } else if (checkPast && deadline.isBefore(now)) {
+      deadlineError = recurring
+          ? 'That first-due time has already passed'
+          : 'That deadline has already passed';
+    }
+
+    return TaskFormErrors(
+      description: descriptionError,
+      deadline: deadlineError,
+      frequency: frequencyError,
+    );
+  }
+}
