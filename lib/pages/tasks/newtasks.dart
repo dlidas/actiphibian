@@ -664,6 +664,19 @@ class _NewTasksState extends State<NewTasks> {
         ),
       ),
     );
+    // Navigator.of(context).push(
+    //   MaterialPageRoute<void>(
+    //     builder: (_) => Scaffold(
+    //       appBar: const UserStatsAppBar(title: 'Calendar'),
+    //       body: SafeArea(
+    //         child: TaskCalendar(
+    //           tasks: List<Task>.of(_tasks),
+    //           habits: List<Habit>.of(_habits),
+    //         ),
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 
   @override

@@ -1,5 +1,10 @@
+import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/main.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'statistics.dart';
 import 'collection.dart';
+import 'socials.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -46,10 +51,10 @@ class ProfilePage extends StatelessWidget {
                 ),
 
                 // Credentials
-                const Column(
+                Column(
                   children: [
                     Text(
-                      "Username",
+                      "${Provider.of<UserManager>(context).user.username}",
                       style: TextStyle(
                         fontSize: 22,
                         fontStyle: FontStyle.italic,
@@ -81,18 +86,40 @@ class ProfilePage extends StatelessWidget {
                 // Stat Box
                 Row(
                   children: [
-                    const SizedBox(width: 10),
-
-                    // Amphibian Collection Box
                     Expanded(
                       child: InkWell(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const CollectionPage(),
+                              builder: (context) => const StatisticsPage(),
                             ),
                           );
+                        },
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Center(
+                            child: Text("Statistics",
+                              style: TextStyle(
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Amphibian Collection Box
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushReplacement(context, 
+                        MaterialPageRoute(builder: (context) => MainPage(pageIndex: 3,)));
                         },
                         child: Container(
                           height: 80,
@@ -114,6 +141,32 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Socials Box
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SocialsPage(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 38, 90, 150),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: const Center(
+                      child: Text("Socials",
+                        style: TextStyle(
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(width: 10),
             ],
           )
