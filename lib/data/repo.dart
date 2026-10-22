@@ -6,6 +6,7 @@ import '../models/habit.dart';
 import '../models/focus_session.dart';
 import '../models/task.dart';
 import '../models/user.dart';
+import '../models/stats.dart';
 import 'tables.dart';
 
 class LocalDb {
@@ -28,6 +29,10 @@ class LocalDb {
         await db.execute(Tables.focusSessions());
         await db.execute(Tables.tags());
         await db.execute(Tables.amphibians());
+        await db.execute(Tables.statistics());
+        await db.execute(Tables.dailyStatistics());
+        await db.execute(Tables.weeklyStatistics());
+        await db.execute(Tables.monthlyStatistics());
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -242,4 +247,50 @@ class LocalDb {
     final rows = await db.query('amphibians');
     return rows.map(Amphibian.fromMap).toList();
   }
+
+  // static Future<Statistics?> getStatistics(int id) async {
+  //   final db = await database;
+
+  //   final stats = await db.rawQuery('SELECT * FROM statistics WHERE id = ?', [id]);
+
+  //   if (stats.isEmpty) return null;
+
+  //   return Statistics.fromMap(stats.first);
+  // }
+
+  static Future<List<Statistics>> getStatistics() async {
+    final db = await database;
+    final rows = await db.query('statistics');
+    return rows.map(Statistics.fromMap).toList();
+  }
+
+  // static Future<Statistics?> getDailyStatistics(int id) async {
+  //   final db = await database;
+
+  //   final daily = await db.rawQuery('SELECT * FROM dailyStatistics WHERE id = ?', [id]);
+
+  //   if (daily.isEmpty) return null;
+
+  //   return Statistics.fromMap(daily.first);
+  // }
+
+  // static Future<Statistics?> getWeeklyStatistics(int id) async {
+  //   final db = await database;
+
+  //   final weekly = await db.rawQuery('SELECT * FROM weeklyStatistics WHERE id = ?', [id]);
+
+  //   if (weekly.isEmpty) return null;
+
+  //   return Statistics.fromMap(weekly.first);
+  // }
+
+  // static Future<Statistics?> getMonthlyStatistics(int id) async {
+  //   final db = await database;
+
+  //   final monthly = await db.rawQuery('SELECT * FROM monthlyStatistics WHERE id = ?', [id]);
+
+  //   if (monthly.isEmpty) return null;
+
+  //   return Statistics.fromMap(monthly.first);
+  // }
 }
