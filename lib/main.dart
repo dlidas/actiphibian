@@ -2,14 +2,18 @@ import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/models/user.dart';
 import 'package:flutter/material.dart';
+
 // import 'package:path/path.dart';
 import 'login.dart';
 import 'pages/pages.dart';
+
 import 'package:provider/provider.dart';
+import 'services/user_progress.dart';
+import 'widgets/user_stats_app_bar.dart';
 
 void main() async {
-  bool isNewUser= true;
-  
+  bool isNewUser = true;
+
   WidgetsFlutterBinding.ensureInitialized();
 
   //FOR DEBUGGING: RESETS DATABASE - BE CAREFUL
@@ -21,22 +25,22 @@ void main() async {
   if (await LocalDb.getUser(1) != null) {
     if ((await LocalDb.getUser(1) as User).id != null) {
       isNewUser = false;
-    }    
+    }
   }
 
   runApp(
     ChangeNotifierProvider(
       create: (context) => UserManager(user: User.newUser()),
       child: Init(isNewUser: isNewUser),
-    )
+    ),
   );
 }
 
 class Init extends StatelessWidget {
   final bool isNewUser;
-  
+
   const Init({super.key, required this.isNewUser});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -56,9 +60,7 @@ class Init extends StatelessWidget {
           onError: Colors.white,
           brightness: Brightness.light,
         ),
-        iconTheme: IconThemeData(
-          color: Color(0xFF1D3B00),
-        ),
+        iconTheme: IconThemeData(color: Color(0xFF1D3B00)),
       ),
       // debugShowCheckedModeBanner: false,
       home: isNewUser ? LoginPage() : MainPage(),
@@ -68,7 +70,7 @@ class Init extends StatelessWidget {
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MainPage();
@@ -89,15 +91,21 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    _loadUser();    
+    _loadUser();
   }
 
   Future<void> _loadUser() async {
     //Get users from local db
-    List<User> users = await LocalDb.getUsers();
+    final users = await LocalDb.getUsers();
+    final tasks = await LocalDb.getTasks();
 
     //Get user from db (with id)
     User userWithId = users.last;
+    final progress = UserProgress.fromTasks(tasks, now: DateTime.now());
+    userWithId
+      ..level = progress.level
+      ..xp = progress.totalXp
+      ..balance = progress.coins;
 
     if (!mounted) return;
 
@@ -109,24 +117,8 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        //CURRENCY
-        leading: Center(
-          child: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.onSecondary, 
-            foregroundColor: Theme.of(context).colorScheme.secondary,
-            child: Text('${Provider.of<UserManager>(context).user.balance}'),
-          ),
-        ),
-        //LEVEL
-        title: Center(
-          child: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.secondary, 
-            foregroundColor: Theme.of(context).colorScheme.onSecondary,
-            child: Text('${Provider.of<UserManager>(context).user.level}'),
-          ),
-        ),
+      appBar: UserStatsAppBar(
+        title: 'Actiphibian',
         actions: <Widget>[
           //SETTINGS
           IconButton(
@@ -143,9 +135,9 @@ class _MainPageState extends State<MainPage> {
             if (states.contains(WidgetState.selected)) {
               return IconThemeData(color: Colors.red);
             }
-              return IconThemeData(color: Theme.of(context).iconTheme.color);
-          })
-        ), 
+            return IconThemeData(color: Theme.of(context).iconTheme.color);
+          }),
+        ),
         child: NavigationBar(
           backgroundColor: Theme.of(context).colorScheme.primary,
           onDestinationSelected: (int index) {
@@ -158,39 +150,39 @@ class _MainPageState extends State<MainPage> {
           destinations: const <Widget>[
             //HOME
             NavigationDestination(
-              icon: Icon(Icons.home_outlined), 
+              icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
-              label: 'Home'
+              label: 'Home',
             ),
             //TASKS
             NavigationDestination(
-              icon: Icon(Icons.check_circle_outlined), 
+              icon: Icon(Icons.check_circle_outlined),
               selectedIcon: Icon(Icons.check_circle),
-              label: 'Tasks'
+              label: 'Tasks',
             ),
             //FOCUS
             NavigationDestination(
-              icon: Icon(Icons.timer_outlined), 
+              icon: Icon(Icons.timer_outlined),
               selectedIcon: Icon(Icons.timer),
-              label: 'Focus'
+              label: 'Focus',
             ),
             //COLLECTION
             NavigationDestination(
-              icon: Icon(Icons.pie_chart_outline), 
+              icon: Icon(Icons.pie_chart_outline),
               selectedIcon: Icon(Icons.pie_chart),
-              label: 'Collection'
+              label: 'Collection',
             ),
             //CALENDAR
             NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined), 
+              icon: Icon(Icons.calendar_month_outlined),
               selectedIcon: Icon(Icons.calendar_month),
-              label: 'Calendar'
+              label: 'Calendar',
             ),
             //PROFILE
             NavigationDestination(
-              icon: Icon(Icons.person_outline), 
+              icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
-              label: 'Profile'
+              label: 'Profile',
             ),
           ],
         ),
@@ -212,4 +204,3 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
-

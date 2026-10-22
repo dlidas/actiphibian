@@ -12,4 +12,19 @@ class UserManager extends ChangeNotifier {
     _user = user;
     notifyListeners();
   }
+
+  void updateProgress({
+    required int level,
+    required int xp,
+    required int balance,
+  }) {
+    if (_user.level == level && _user.xp == xp && _user.balance == balance) {
+      return;
+    }
+    _user
+      ..level = level
+      ..xp = xp
+      ..balance = balance;
+    notifyListeners();
+  }
 }

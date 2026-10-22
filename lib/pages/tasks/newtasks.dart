@@ -1,8 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/task.dart';
 import 'package:actiphibian/data/repo.dart';
+import 'package:actiphibian/data/userManager.dart';
+import 'package:provider/provider.dart';
 import 'package:actiphibian/utils/task_parsers.dart';
 import 'package:actiphibian/utils/task_creation_logger.dart';
 import 'package:actiphibian/services/recurrence.dart';
@@ -13,6 +16,7 @@ import 'package:actiphibian/widgets/progress_header.dart';
 import 'package:actiphibian/widgets/task_calendar.dart';
 import 'package:actiphibian/widgets/task_card.dart';
 import 'package:actiphibian/widgets/task_form_dialog.dart';
+import 'package:actiphibian/widgets/user_stats_app_bar.dart';
 
 class NewTasks extends StatefulWidget {
   const NewTasks({super.key});
@@ -57,9 +61,7 @@ class _NewTasksState extends State<NewTasks> {
       if (habits.isEmpty) {
         // Preserve the four built-in choices that the screen already showed.
         for (var i = 0; i < _defaultHabitNames.length; i++) {
-          await LocalDb.addHabit(
-            Habit(id: i + 1, name: _defaultHabitNames[i]),
-          );
+          await LocalDb.addHabit(Habit(id: i + 1, name: _defaultHabitNames[i]));
         }
         habits = await LocalDb.getHabits();
       }
@@ -79,6 +81,7 @@ class _NewTasksState extends State<NewTasks> {
         });
         _isLoading = false;
       });
+      _syncProgressToUserManager();
       _flagNewlyMissedTasks();
     } catch (error) {
       if (!mounted) return;
@@ -100,9 +103,8 @@ class _NewTasksState extends State<NewTasks> {
 
   void _reportDatabaseError(String message, Object error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$message: $error')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$message: $error')));
   }
 
   void _saveTaskSilently(Task task) {
@@ -122,18 +124,24 @@ class _NewTasksState extends State<NewTasks> {
   // Coins earned are derived from total XP, so only spending needs storing.
   final int _coinsSpent = 0;
 
+  void _syncProgressToUserManager() {
+    final progress = _progress;
+    context.read<UserManager>().updateProgress(
+      level: progress.level,
+      xp: progress.totalXp,
+      balance: progress.coins,
+    );
+  }
+
   Timer? _missedCheckTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _missedCheckTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        if (!_isLoading) _flagNewlyMissedTasks();
-      },
-    );
+    _missedCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!_isLoading) _flagNewlyMissedTasks();
+    });
   }
 
   @override
@@ -261,8 +269,9 @@ class _NewTasksState extends State<NewTasks> {
   void _toggleSubtask(int taskIndex, int subtaskIndex) {
     final task = _tasks[taskIndex];
     final updatedSubtasks = List<Subtask>.from(task.subtasks);
-    updatedSubtasks[subtaskIndex] = updatedSubtasks[subtaskIndex]
-        .copyWith(isDone: !updatedSubtasks[subtaskIndex].isDone);
+    updatedSubtasks[subtaskIndex] = updatedSubtasks[subtaskIndex].copyWith(
+      isDone: !updatedSubtasks[subtaskIndex].isDone,
+    );
     final updatedTask = task.copyWith(subtasks: updatedSubtasks);
     setState(() => _tasks[taskIndex] = updatedTask);
     _saveTaskSilently(updatedTask);
@@ -272,7 +281,8 @@ class _NewTasksState extends State<NewTasks> {
     final task = _tasks[index];
     final now = DateTime.now();
     final progressBefore = _progress;
-    final isLate = task.status == 'missed' ||
+    final isLate =
+        task.status == 'missed' ||
         (task.deadline != null && now.isAfter(task.deadline!));
     final completionsToday = XpCalculator.completionsOnDay(
       _tasks
@@ -329,6 +339,7 @@ class _NewTasksState extends State<NewTasks> {
       _tasks[currentIndex] = completedTask;
       if (nextOccurrence != null) _tasks.add(nextOccurrence);
     });
+    _syncProgressToUserManager();
     final progressAfter = _progress;
     final coinsGained = progressAfter.coins - progressBefore.coins;
     final coinsText = coinsGained > 0
@@ -336,19 +347,19 @@ class _NewTasksState extends State<NewTasks> {
         : '';
     var message = isLate
         ? 'Task completed — +$xpEarned XP$coinsText. Past the deadline, so no '
-            'early bonus, but nothing was taken away either.'
+              'early bonus, but nothing was taken away either.'
         : 'Task completed! +$xpEarned XP$coinsText';
     if (XpCalculator.dailyMultiplier(completionsToday) < 1.0) {
       message += ' Reduced XP: that was task ${completionsToday + 1} today.';
     }
     if (nextOccurrence != null) {
-      message += ' Next one: ${TaskLabels.deadlineLabel(nextOccurrence.deadline!)}.';
+      message +=
+          ' Next one: ${TaskLabels.deadlineLabel(nextOccurrence.deadline!)}.';
     }
     final newRank = UserProgress.rankReached(progressBefore, progressAfter);
     if (newRank != null) message += ' Rank up: ${newRank.name}!';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _requestComplete(int taskId) async {
@@ -385,8 +396,11 @@ class _NewTasksState extends State<NewTasks> {
     await _markTaskComplete(index);
   }
 
-  UserProgress get _progress =>
-      UserProgress.fromTasks(_tasks, now: DateTime.now(), coinsSpent: _coinsSpent);
+  UserProgress get _progress => UserProgress.fromTasks(
+    _tasks,
+    now: DateTime.now(),
+    coinsSpent: _coinsSpent,
+  );
 
   void _openTaskDetails(int taskId) {
     showModalBottomSheet<void>(
@@ -403,21 +417,21 @@ class _NewTasksState extends State<NewTasks> {
             final now = DateTime.now();
 
             Widget line(String label, String value) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 90,
-                        child: Text(
-                          label,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      Expanded(child: Text(value)),
-                    ],
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: Text(
+                      label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                );
+                  Expanded(child: Text(value)),
+                ],
+              ),
+            );
 
             return SafeArea(
               child: SingleChildScrollView(
@@ -432,7 +446,9 @@ class _NewTasksState extends State<NewTasks> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task.description.isEmpty ? '(untitled task)' : task.description,
+                      task.description.isEmpty
+                          ? '(untitled task)'
+                          : task.description,
                       style: Theme.of(sheetContext).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 2),
@@ -444,9 +460,14 @@ class _NewTasksState extends State<NewTasks> {
                     const SizedBox(height: 12),
                     line(
                       'Deadline',
-                      task.deadline == null ? 'None' : TaskLabels.deadlineLabel(task.deadline!),
+                      task.deadline == null
+                          ? 'None'
+                          : TaskLabels.deadlineLabel(task.deadline!),
                     ),
-                    line('Difficulty', TaskLabels.difficultyLabel(task.difficulty)),
+                    line(
+                      'Difficulty',
+                      TaskLabels.difficultyLabel(task.difficulty),
+                    ),
                     line(
                       'Duration',
                       task.durationMinutes != null
@@ -454,7 +475,12 @@ class _NewTasksState extends State<NewTasks> {
                           : 'Not set',
                     ),
                     line('Habit', _habitName(task.habitId)),
-                    line('Repeats', task.isRecurring ? Recurrence.label(task.recurrenceFrequency) : 'No'),
+                    line(
+                      'Repeats',
+                      task.isRecurring
+                          ? Recurrence.label(task.recurrenceFrequency)
+                          : 'No',
+                    ),
                     const Divider(height: 24),
                     Text(
                       task.hasSubtasks
@@ -473,7 +499,9 @@ class _NewTasksState extends State<NewTasks> {
                           title: Text(
                             subtask.text,
                             style: subtask.isDone
-                                ? const TextStyle(decoration: TextDecoration.lineThrough)
+                                ? const TextStyle(
+                                    decoration: TextDecoration.lineThrough,
+                                  )
                                 : null,
                           ),
                           value: subtask.isDone,
@@ -499,7 +527,11 @@ class _NewTasksState extends State<NewTasks> {
                         if (isOpen)
                           FilledButton.icon(
                             icon: const Icon(Icons.check_circle_outline),
-                            label: Text(task.status == 'missed' ? 'Complete (late)' : 'Complete'),
+                            label: Text(
+                              task.status == 'missed'
+                                  ? 'Complete (late)'
+                                  : 'Complete',
+                            ),
                             onPressed: () {
                               Navigator.pop(sheetContext);
                               _requestComplete(taskId);
@@ -511,7 +543,9 @@ class _NewTasksState extends State<NewTasks> {
                             label: const Text('Edit'),
                             onPressed: () {
                               Navigator.pop(sheetContext);
-                              final i = _tasks.indexWhere((t) => t.id == taskId);
+                              final i = _tasks.indexWhere(
+                                (t) => t.id == taskId,
+                              );
                               if (i != -1) _showEditTaskDialog(i);
                             },
                           ),
@@ -521,7 +555,9 @@ class _NewTasksState extends State<NewTasks> {
                             label: const Text('Cancel task'),
                             onPressed: () {
                               Navigator.pop(sheetContext);
-                              final i = _tasks.indexWhere((t) => t.id == taskId);
+                              final i = _tasks.indexWhere(
+                                (t) => t.id == taskId,
+                              );
                               if (i != -1) _cancelTask(i);
                             },
                           ),
@@ -529,7 +565,10 @@ class _NewTasksState extends State<NewTasks> {
                         if (task.status != 'completed')
                           TextButton.icon(
                             icon: const Icon(Icons.delete, color: Colors.red),
-                            label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                            label: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
                             onPressed: () {
                               Navigator.pop(sheetContext);
                               _deleteTask(taskId);
@@ -611,11 +650,13 @@ class _NewTasksState extends State<NewTasks> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Calendar')),
-          body: SafeArea(child: TaskCalendar(
+          appBar: const UserStatsAppBar(title: 'Calendar'),
+          body: SafeArea(
+            child: TaskCalendar(
               tasks: List<Task>.of(_tasks),
               habits: List<Habit>.of(_habits),
-            )),
+            ),
+          ),
         ),
       ),
     );
@@ -628,31 +669,36 @@ class _NewTasksState extends State<NewTasks> {
     final today = TaskLabels.todaySummary(_tasks, now);
 
     // Today's Tasks are those due or completed today; everything else goes under "Other tasks".
-    final todaysTasks = _tasks.where((t) => TaskLabels.isTodaysTask(t, now)).toList();
-    final otherTasks = _tasks.where((t) => !TaskLabels.isTodaysTask(t, now)).toList();
+    final todaysTasks = _tasks
+        .where((t) => TaskLabels.isTodaysTask(t, now))
+        .toList();
+    final otherTasks = _tasks
+        .where((t) => !TaskLabels.isTodaysTask(t, now))
+        .toList();
 
     Widget cardFor(Task task) => TaskCard(
-          task: task,
-          now: now,
-          onToggleComplete: () => _requestComplete(task.id!),
-          onOpen: () => _openTaskDetails(task.id!),
-        );
+      task: task,
+      now: now,
+      onToggleComplete: () => _requestComplete(task.id!),
+      onOpen: () => _openTaskDetails(task.id!),
+    );
 
     Widget heading(String text, {String? trailing, Widget? action}) => Padding(
-          padding: const EdgeInsets.fromLTRB(15, 18, 15, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (trailing != null) Text(trailing, style: const TextStyle(fontSize: 12)),
-              ?action,
-            ],
+      padding: const EdgeInsets.fromLTRB(15, 18, 15, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
-        );
+          if (trailing != null)
+            Text(trailing, style: const TextStyle(fontSize: 12)),
+          ?action,
+        ],
+      ),
+    );
 
     // Temporary entry point until the calendar is its own tab.
     final calendarButton = IconButton(
@@ -666,43 +712,57 @@ class _NewTasksState extends State<NewTasks> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-          ProgressHeader(progress: progress),
-          Expanded(
-            child: _tasks.isEmpty
-                ? Column(
-                    children: [
-                      heading("Today's Tasks", trailing: today.label, action: calendarButton),
-                      const Expanded(
-                        child: Center(child: Text('No tasks yet — tap + to add one')),
-                      ),
-                    ],
-                  )
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 90),
-                    children: [
-                      heading("Today's Tasks", trailing: today.label, action: calendarButton),
-                      if (todaysTasks.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
-                          child: Text('Nothing due today.'),
+              children: [
+                ProgressHeader(progress: progress),
+                Expanded(
+                  child: _tasks.isEmpty
+                      ? Column(
+                          children: [
+                            heading(
+                              "Today's Tasks",
+                              trailing: today.label,
+                              action: calendarButton,
+                            ),
+                            const Expanded(
+                              child: Center(
+                                child: Text('No tasks yet — tap + to add one'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(bottom: 90),
+                          children: [
+                            heading(
+                              "Today's Tasks",
+                              trailing: today.label,
+                              action: calendarButton,
+                            ),
+                            if (todaysTasks.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.fromLTRB(15, 0, 15, 10),
+                                child: Text('Nothing due today.'),
+                              ),
+                            for (final task in todaysTasks)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
+                                ),
+                                child: cardFor(task),
+                              ),
+                            if (otherTasks.isNotEmpty) heading('Other tasks'),
+                            for (final task in otherTasks)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
+                                ),
+                                child: cardFor(task),
+                              ),
+                          ],
                         ),
-                      for (final task in todaysTasks)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 15),
-                          child: cardFor(task),
-                        ),
-                      if (otherTasks.isNotEmpty) heading('Other tasks'),
-                      for (final task in otherTasks)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 15),
-                          child: cardFor(task),
-                        ),
-                    ],
-                  ),
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _isLoading ? null : _showAddTaskDialog,
         child: const Icon(Icons.add),
