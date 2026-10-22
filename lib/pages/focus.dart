@@ -10,13 +10,15 @@ import '../services/focus_xp.dart';
 import '../widgets/user_stats_app_bar.dart';
 
 void main() {
-  runApp(ChangeNotifierProvider(
-    create: (_) => UserManager(user: User.newUser()),
-    child: const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: FocusPage(),
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => UserManager(user: User.newUser()),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: FocusPage(),
+      ),
     ),
-  ));
+  );
 }
 
 class FocusPage extends StatefulWidget {
@@ -31,16 +33,13 @@ class _FocusPageState extends State<FocusPage> {
   int _minutes = 20;
   int _seconds = 0;
   int _secondsRemaining = 1200; // 20 minutes default
-  int _initialSessionMinutes = 20; // Tracks starting time for Ovayo's calculation
+  int _focusedSeconds = 0;
   Timer? _timer;
   bool _isRunning = false;
 
   // Distraction tracking
   int _distractions = 0;
 
-  // User Totals (Simulated for local balance display)
-  int _totalUserXP = 0;
-  int _totalUserCoins = 0;
   DateTime? _sessionStartedAt;
 
   @override
@@ -51,10 +50,12 @@ class _FocusPageState extends State<FocusPage> {
 
   // Set Focus Timer Dialog (The Middle Wireframe Page)
   Future<void> _showSetFocusTimerDialog() async {
-    TextEditingController minController =
-        TextEditingController(text: _minutes.toString().padLeft(2, '0'));
-    TextEditingController secController =
-        TextEditingController(text: _seconds.toString().padLeft(2, '0'));
+    TextEditingController minController = TextEditingController(
+      text: _minutes.toString().padLeft(2, '0'),
+    );
+    TextEditingController secController = TextEditingController(
+      text: _seconds.toString().padLeft(2, '0'),
+    );
 
     await showDialog(
       context: context,
@@ -92,7 +93,10 @@ class _FocusPageState extends State<FocusPage> {
 
                 // Interactive Minutes : Seconds Input Box
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFD3EFA1),
                     borderRadius: BorderRadius.circular(12),
@@ -148,7 +152,10 @@ class _FocusPageState extends State<FocusPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -162,13 +169,15 @@ class _FocusPageState extends State<FocusPage> {
                         setState(() {
                           _minutes = parsedMins;
                           _seconds = parsedSecs;
-                          _initialSessionMinutes = parsedMins > 0 ? parsedMins : 1; // Save starting minutes
                           _secondsRemaining = (parsedMins * 60) + parsedSecs;
                         });
 
                         Navigator.pop(context);
                       },
-                      child: const Text('OK', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -188,11 +197,17 @@ class _FocusPageState extends State<FocusPage> {
       if (_secondsRemaining <= 0) {
         _secondsRemaining = (_minutes * 60) + _seconds;
       }
+      if (_sessionStartedAt == null) {
+        _focusedSeconds = 0;
+      }
       _sessionStartedAt ??= DateTime.now();
       _isRunning = true;
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_secondsRemaining > 0) {
-          setState(() => _secondsRemaining--);
+          setState(() {
+            _secondsRemaining--;
+            _focusedSeconds++;
+          });
         } else {
           _timer?.cancel();
           setState(() => _isRunning = false);
@@ -206,17 +221,18 @@ class _FocusPageState extends State<FocusPage> {
   Future<void> _onTimerCompleted() async {
     final startedAt = _sessionStartedAt ?? DateTime.now();
     _sessionStartedAt = null;
+    final focusedMinutes = _focusedSeconds ~/ 60;
 
     try {
       final sessions = await LocalDb.getFocusSessions();
       final earnedXP = FocusXp.xpForSession(
-        focusedMinutes: _initialSessionMinutes,
+        focusedMinutes: focusedMinutes,
         focusMinutesToday: FocusXp.focusMinutesOnDay(sessions, startedAt),
       );
       final session = FocusSession(
         methodId: 'timer',
         startedAt: startedAt,
-        focusedMinutes: _initialSessionMinutes,
+        focusedMinutes: focusedMinutes,
         xpAwarded: earnedXP,
       );
       await LocalDb.addFocusSession(session);
@@ -229,18 +245,15 @@ class _FocusPageState extends State<FocusPage> {
         now: DateTime.now(),
         focusSessions: [...sessions, session],
       );
+      final previousBalance = currentUser.balance;
       context.read<UserManager>().updateProgress(
         level: progress.level,
         xp: progress.totalXp,
         balance: progress.coins,
       );
 
-      final earnedCoins = progress.coins - currentUser.balance;
+      final earnedCoins = progress.coins - previousBalance;
       if (!mounted) return;
-      setState(() {
-        _totalUserXP = progress.totalXp;
-        _totalUserCoins = progress.coins;
-      });
       _showAwardDialog(earnedXP, earnedCoins);
     } catch (error, stackTrace) {
       debugPrint('Could not save focus session rewards: $error');
@@ -264,21 +277,36 @@ class _FocusPageState extends State<FocusPage> {
           ),
           title: const Text(
             'Session Completed! 🎉',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D3B00)),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D3B00),
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Earned XP: +$xpEarned XP',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                'Earned XP: +$xpEarned XP',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text('Earned Coins: +$coinsEarned Coins',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                'Earned Coins: +$coinsEarned Coins',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               if (_distractions > 0) ...[
                 const SizedBox(height: 8),
-                Text('Distractions logged: $_distractions',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(
+                  'Distractions logged: $_distractions',
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
               ],
             ],
           ),
@@ -288,7 +316,10 @@ class _FocusPageState extends State<FocusPage> {
                 backgroundColor: const Color(0xFF8CC63F),
               ),
               onPressed: () => Navigator.pop(context),
-              child: const Text('Claim Rewards', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Claim Rewards',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -316,6 +347,7 @@ class _FocusPageState extends State<FocusPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<UserManager>().user;
     return Scaffold(
       appBar: const UserStatsAppBar(title: 'Focus Pond'),
       body: Center(
@@ -329,14 +361,28 @@ class _FocusPageState extends State<FocusPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Chip(
-                    avatar: const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
-                    label: Text('$_totalUserCoins Coins', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    avatar: const Icon(
+                      Icons.monetization_on,
+                      color: Colors.amber,
+                      size: 18,
+                    ),
+                    label: Text(
+                      '${user.balance} Coins',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     backgroundColor: const Color(0xFFE5F8B8),
                   ),
                   const SizedBox(width: 12),
                   Chip(
-                    avatar: const Icon(Icons.bolt, color: Colors.orange, size: 18),
-                    label: Text('$_totalUserXP XP', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    avatar: const Icon(
+                      Icons.bolt,
+                      color: Colors.orange,
+                      size: 18,
+                    ),
+                    label: Text(
+                      '${user.xp} XP',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     backgroundColor: const Color(0xFFE5F8B8),
                   ),
                 ],
@@ -344,26 +390,42 @@ class _FocusPageState extends State<FocusPage> {
               const SizedBox(height: 20),
               Text(
                 'Distractions: $_distractions',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
                 _formattedTime(),
-                style: const TextStyle(fontSize: 54, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 54,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 30),
 
               // Button to trigger the Set Focus Timer dialog
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8CC63F),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                onPressed: _showSetFocusTimerDialog,
-                icon: const Icon(Icons.edit_calendar, color: Colors.white),
-                label: const Text(
-                  'Set Focus Timer',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+              Tooltip(
+                message: _sessionStartedAt == null
+                    ? 'Set the focus timer'
+                    : 'Timer settings are locked until this session ends',
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8CC63F),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed: _sessionStartedAt == null
+                      ? _showSetFocusTimerDialog
+                      : null,
+                  label: const Text(
+                    'Set Focus Timer',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  icon: const Icon(Icons.edit_calendar, color: Colors.white),
                 ),
               ),
 
@@ -379,8 +441,13 @@ class _FocusPageState extends State<FocusPage> {
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: _isRunning ? _logDistraction : null,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                    child: const Text('Log Distraction', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                    ),
+                    child: const Text(
+                      'Log Distraction',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
