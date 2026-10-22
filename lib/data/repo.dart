@@ -2,6 +2,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/habit.dart';
+import '../models/focus_session.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 import 'tables.dart';
@@ -18,11 +19,12 @@ class LocalDb {
   static Future<Database> _initialiseDb() async {
     return openDatabase(
       join(await getDatabasesPath(), 'actiphibian.db'),
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute(Tables.users());
         await db.execute(Tables.habits());
         await db.execute(Tables.tasks());
+        await db.execute(Tables.focusSessions());
         await db.execute(Tables.tags());
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -35,6 +37,9 @@ class LocalDb {
           await db.execute(
             'ALTER TABLE tasks ADD COLUMN perceivedDifficulty TEXT',
           );
+        }
+        if (oldVersion < 3) {
+          await db.execute(Tables.focusSessions());
         }
       },
     );
@@ -156,6 +161,25 @@ class LocalDb {
   static Future<void> deleteTask(int id) async {
     final db = await database;
     await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
+
+  static Future<int> addFocusSession(FocusSession session) async {
+    final db = await database;
+    final values = Map<String, Object?>.from(session.toMap())..remove('id');
+    return db.insert(
+      'focus_sessions',
+      values,
+      conflictAlgorithm: ConflictAlgorithm.fail,
+    );
+  }
+
+  static Future<List<FocusSession>> getFocusSessions() async {
+    final db = await database;
+    final rows = await db.query(
+      'focus_sessions',
+      orderBy: 'startedAt ASC, id ASC',
+    );
+    return rows.map(FocusSession.fromMap).toList();
   }
 
   /// Inserts a habit and returns the SQLite ID. Passing an explicit ID is
