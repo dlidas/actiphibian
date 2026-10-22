@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:actiphibian/services/user_progress.dart';
-import 'package:actiphibian/utils/number_format.dart';
 
 class ProgressHeader extends StatelessWidget {
   final UserProgress progress;
   final String? userName;
+
   final VoidCallback? onCoinsTap;
 
   const ProgressHeader({
@@ -54,20 +54,6 @@ class ProgressHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              _StatChip(
-                icon: Icons.local_fire_department,
-                iconColor: cs.tertiary,
-                text: '${progress.streak}',
-                tooltip: 'Day streak',
-              ),
-              const SizedBox(width: 8),
-              _StatChip(
-                icon: Icons.monetization_on,
-                iconColor: cs.tertiary,
-                text: formatCount(progress.coins),
-                tooltip: 'Coins',
-                onTap: onCoinsTap,
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -99,56 +85,6 @@ class ProgressHeader extends StatelessWidget {
             backgroundColor: cs.secondary,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String text;
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  const _StatChip({
-    required this.icon,
-    required this.iconColor,
-    required this.text,
-    required this.tooltip,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: cs.secondary,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 18, color: iconColor),
-                const SizedBox(width: 4),
-                Text(
-                  text,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: cs.onPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

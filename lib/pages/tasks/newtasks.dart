@@ -1,6 +1,4 @@
 import 'dart:async';
-
-import 'package:actiphibian/main.dart';
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/focus_session.dart';
@@ -653,8 +651,18 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   void _openCalendar() {
-    Navigator.pushReplacement(context, 
-      MaterialPageRoute(builder: (context) => MainPage(pageIndex: 4))
+   Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: const UserStatsAppBar(title: 'Calendar'),
+          body: SafeArea(
+            child: TaskCalendar(
+              tasks: List<Task>.of(_tasks),
+              habits: List<Habit>.of(_habits),
+            ),
+          ),
+        ),
+      ),
     );
     // Navigator.of(context).push(
     //   MaterialPageRoute<void>(
