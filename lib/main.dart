@@ -63,7 +63,7 @@ class Init extends StatelessWidget {
         iconTheme: IconThemeData(color: Color(0xFF1D3B00)),
       ),
       // debugShowCheckedModeBanner: false,
-      home: isNewUser ? LoginPage() : MainPage(),
+      home: isNewUser ? LoginPage() : MainPage(pageIndex: 0),
     );
   }
 }
@@ -73,12 +73,14 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MainPage();
+    return MainPage(pageIndex: 0);
   }
 }
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+  final int pageIndex;
+  
+  const MainPage({super.key, required this.pageIndex});
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -90,6 +92,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   void initState() {
+    currentPageIndex = widget.pageIndex;
     super.initState();
     _loadUser();
   }

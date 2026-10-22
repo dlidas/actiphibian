@@ -70,7 +70,7 @@ class Tables {
         'species TEXT, '
         'description TEXT, '
         'rarity TEXT, '
-        'file_path TEXT, '
+        'file_path TEXT'
       ');';
 
   static String statistics() =>

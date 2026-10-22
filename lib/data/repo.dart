@@ -1,4 +1,5 @@
 // Dependencies: flutter pub add sqflite path
+import 'package:actiphibian/models/amphibian.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/habit.dart';
@@ -26,6 +27,7 @@ class LocalDb {
         await db.execute(Tables.tasks());
         await db.execute(Tables.focusSessions());
         await db.execute(Tables.tags());
+        await db.execute(Tables.amphibians());
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -225,5 +227,19 @@ class LocalDb {
   static Future<void> deleteHabit(int id) async {
     final db = await database;
     await db.delete('habits', where: 'id = ?', whereArgs: [id]);
+  }
+
+  static Future<void> addAmphibian(Amphibian amphibian) async {
+    final db = await database;
+    await db.insert(
+      'amphibians',
+      amphibian.toMap()
+    );
+  }
+
+  static Future<List<Amphibian>> getAmphibians() async {
+    final db = await database;
+    final rows = await db.query('amphibians');
+    return rows.map(Amphibian.fromMap).toList();
   }
 }
