@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/focus_session.dart';
@@ -652,7 +651,7 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   void _openCalendar() {
-    Navigator.of(context).push(
+   Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
           appBar: const UserStatsAppBar(title: 'Calendar'),

@@ -65,7 +65,7 @@ class _TaskFormDialog extends StatefulWidget {
 
 class _TaskFormDialogState extends State<_TaskFormDialog> {
   late final TextEditingController _description;
-  late final TextEditingController _subtasks;
+  late final List<TextEditingController> _subtaskControllers;
   late final TextEditingController _duration;
   late final List<Habit> _habitOptions;
 
@@ -78,14 +78,25 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
 
   bool get _isEdit => widget.existing != null;
 
+  String get _subtasksRaw => _subtaskControllers
+      .map((controller) => controller.text.trim())
+      .where((text) => text.isNotEmpty)
+      // Keep the existing comma-separated format understood by TaskParsers.
+      .join(', ');
+
   @override
   void initState() {
     super.initState();
     final t = widget.existing;
     _description = TextEditingController(text: t?.description ?? '');
-    _subtasks = TextEditingController(
-      text: t == null ? '' : TaskParsers.formatSubtasksForEditing(t.subtasks),
-    );
+    _subtaskControllers = t == null
+        ? <TextEditingController>[TextEditingController()]
+        : t.subtasks
+            .map((subtask) => TextEditingController(text: subtask.text))
+            .toList();
+    if (_subtaskControllers.isEmpty) {
+      _subtaskControllers.add(TextEditingController());
+    }
     _duration = TextEditingController(
       text: t?.durationMinutes?.toString() ?? '',
     );
@@ -100,9 +111,26 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   @override
   void dispose() {
     _description.dispose();
-    _subtasks.dispose();
+    for (final controller in _subtaskControllers) {
+      controller.dispose();
+    }
     _duration.dispose();
     super.dispose();
+  }
+
+  void _addSubtaskField() {
+    setState(() => _subtaskControllers.add(TextEditingController()));
+  }
+
+  void _removeSubtaskField(int index) {
+    if (_subtaskControllers.length == 1) {
+      _subtaskControllers[index].clear();
+      setState(() {});
+      return;
+    }
+    final controller = _subtaskControllers.removeAt(index);
+    controller.dispose();
+    setState(() {});
   }
 
   Future<void> _pickDeadline() async {
@@ -201,11 +229,11 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       context,
       TaskFormResult(
         description: _description.text.trim(),
-        subtasksRaw: _subtasks.text,
+        subtasksRaw: _subtasksRaw,
         durationMinutes: TaskParsers.parseDuration(_duration.text),
         // Recurring tasks with no first-due date start at the end of today.
-        deadline:
-            _deadline ?? DateTime(now.year, now.month, now.day, 23, 59, 59),
+        deadline: _deadline ??
+            DateTime(now.year, now.month, now.day, 23, 59, 59),
         recurring: _recurring,
         recurrenceFrequency: _recurring ? _frequency : null,
         difficulty: _difficulty,
@@ -215,11 +243,40 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   }
 
   Widget _dot(Color color) => Container(
-    width: 12,
-    height: 12,
-    margin: const EdgeInsets.only(right: 8),
-    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-  );
+        width: 12,
+        height: 12,
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
+
+  Widget _subtaskField(int index) {
+    final isLast = index == _subtaskControllers.length - 1;
+    final isFirst = index == 0;
+
+    return TextField(
+      key: ValueKey(_subtaskControllers[index]),
+      controller: _subtaskControllers[index],
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(
+        labelText: isFirst ? 'Subtasks (optional)' : 'Subtask ${index + 1}',
+        hintText: isFirst ? 'e.g. Wash dishes' : 'Enter another subtask',
+        helperText: isFirst && _isEdit
+            ? 'Editing this resets subtask check-marks'
+            : null,
+        suffixIcon: IconButton(
+          tooltip: isLast ? 'Add subtask' : 'Remove subtask',
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+          icon: Icon(
+            isLast ? Icons.add : Icons.remove_circle_outline,
+            size: 20,
+          ),
+          onPressed: isLast ? _addSubtaskField : () => _removeSubtaskField(index),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,17 +325,10 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
                 ),
               ),
             ),
-            TextField(
-              controller: _subtasks,
-              decoration: InputDecoration(
-                labelText: 'Subtasks (optional)',
-                hintText: 'wash dishes, buy milk',
-                // Subtasks are plain text, so editing them resets every tick.
-                helperText: _isEdit
-                    ? 'Editing this resets subtask check-marks'
-                    : null,
-              ),
-            ),
+            for (var i = 0; i < _subtaskControllers.length; i++) ...[
+              if (i > 0) const SizedBox(height: 4),
+              _subtaskField(i),
+            ],
             TextField(
               controller: _duration,
               decoration: const InputDecoration(
