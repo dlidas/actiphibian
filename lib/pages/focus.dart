@@ -1,11 +1,21 @@
 import 'dart:async';
+import 'package:actiphibian/data/repo.dart';
+import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/models/focus_session.dart';
+import 'package:actiphibian/models/user.dart';
+import 'package:actiphibian/services/user_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/focus_xp.dart';
+import '../widgets/user_stats_app_bar.dart';
 
 void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: FocusPage(),
+  runApp(ChangeNotifierProvider(
+    create: (_) => UserManager(user: User.newUser()),
+    child: const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: FocusPage(),
+    ),
   ));
 }
 
@@ -31,6 +41,7 @@ class _FocusPageState extends State<FocusPage> {
   // User Totals (Simulated for local balance display)
   int _totalUserXP = 0;
   int _totalUserCoins = 0;
+  DateTime? _sessionStartedAt;
 
   @override
   void dispose() {
@@ -177,6 +188,7 @@ class _FocusPageState extends State<FocusPage> {
       if (_secondsRemaining <= 0) {
         _secondsRemaining = (_minutes * 60) + _seconds;
       }
+      _sessionStartedAt ??= DateTime.now();
       _isRunning = true;
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_secondsRemaining > 0) {
@@ -184,31 +196,60 @@ class _FocusPageState extends State<FocusPage> {
         } else {
           _timer?.cancel();
           setState(() => _isRunning = false);
-          _onTimerCompleted(); // Trigger reward calculations when countdown hits 0
+          _onTimerCompleted();
         }
       });
     }
   }
 
   // Triggered automatically when the timer finishes
-  void _onTimerCompleted() {
-    // 1. Calculate XP using Ovayo's FocusXp service from focus_xp.dart
-    int earnedXP = FocusXp.xpForSession(
-      focusedMinutes: _initialSessionMinutes,
-      focusMinutesToday: 0,
-    );
+  Future<void> _onTimerCompleted() async {
+    final startedAt = _sessionStartedAt ?? DateTime.now();
+    _sessionStartedAt = null;
 
-    // 2. Calculate currency/coins earned (10 XP = 1 Coin)
-    int earnedCoins = (earnedXP / 10).floor();
+    try {
+      final sessions = await LocalDb.getFocusSessions();
+      final earnedXP = FocusXp.xpForSession(
+        focusedMinutes: _initialSessionMinutes,
+        focusMinutesToday: FocusXp.focusMinutesOnDay(sessions, startedAt),
+      );
+      final session = FocusSession(
+        methodId: 'timer',
+        startedAt: startedAt,
+        focusedMinutes: _initialSessionMinutes,
+        xpAwarded: earnedXP,
+      );
+      await LocalDb.addFocusSession(session);
 
-    // 3. Update user profile totals
-    setState(() {
-      _totalUserXP += earnedXP;
-      _totalUserCoins += earnedCoins;
-    });
+      final tasks = await LocalDb.getTasks();
+      if (!mounted) return;
+      final currentUser = context.read<UserManager>().user;
+      final progress = UserProgress.fromTasks(
+        tasks,
+        now: DateTime.now(),
+        focusSessions: [...sessions, session],
+      );
+      context.read<UserManager>().updateProgress(
+        level: progress.level,
+        xp: progress.totalXp,
+        balance: progress.coins,
+      );
 
-    // 4. Show Award Modal Screen (Cornelle's completion UI hook)
-    _showAwardDialog(earnedXP, earnedCoins);
+      final earnedCoins = progress.coins - currentUser.balance;
+      if (!mounted) return;
+      setState(() {
+        _totalUserXP = progress.totalXp;
+        _totalUserCoins = progress.coins;
+      });
+      _showAwardDialog(earnedXP, earnedCoins);
+    } catch (error, stackTrace) {
+      debugPrint('Could not save focus session rewards: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save focus session rewards: $error')),
+      );
+    }
   }
 
   void _showAwardDialog(int xpEarned, int coinsEarned) {
@@ -276,10 +317,7 @@ class _FocusPageState extends State<FocusPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Focus Pond'),
-        centerTitle: true,
-      ),
+      appBar: const UserStatsAppBar(title: 'Focus Pond'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),

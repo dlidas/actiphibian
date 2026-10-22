@@ -101,7 +101,12 @@ class _MainPageState extends State<MainPage> {
 
     //Get user from db (with id)
     User userWithId = users.last;
-    final progress = UserProgress.fromTasks(tasks, now: DateTime.now());
+    final focusSessions = await LocalDb.getFocusSessions();
+    final progress = UserProgress.fromTasks(
+      tasks,
+      now: DateTime.now(),
+      focusSessions: focusSessions,
+    );
     userWithId
       ..level = progress.level
       ..xp = progress.totalXp

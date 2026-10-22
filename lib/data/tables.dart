@@ -40,6 +40,15 @@ class Tables {
       'updatedAt TEXT NOT NULL'
       ');';
 
+  static String focusSessions() =>
+      'CREATE TABLE IF NOT EXISTS focus_sessions('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'methodId TEXT NOT NULL, '
+      'startedAt TEXT NOT NULL, '
+      'focusedMinutes INTEGER NOT NULL, '
+      'xpAwarded INTEGER NOT NULL DEFAULT 0'
+      ');';
+
   // Fix the trailing comma in the previous tags schema so a new DB can open.
   static String tags() =>
       'CREATE TABLE tags('

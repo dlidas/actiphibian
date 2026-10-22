@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
+import 'package:actiphibian/models/focus_session.dart';
 import 'package:actiphibian/models/task.dart';
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
@@ -28,6 +29,7 @@ class NewTasks extends StatefulWidget {
 class _NewTasksState extends State<NewTasks> {
   final List<Task> _tasks = [];
   final List<Habit> _habits = [];
+  List<FocusSession> _focusSessions = const [];
   final List<Future<void>> _pendingHabitWrites = [];
   int _nextHabitId = 1;
   bool _isLoading = true;
@@ -66,6 +68,7 @@ class _NewTasksState extends State<NewTasks> {
         habits = await LocalDb.getHabits();
       }
       final tasks = await LocalDb.getTasks();
+      final focusSessions = await LocalDb.getFocusSessions();
       if (!mounted) return;
 
       setState(() {
@@ -75,6 +78,7 @@ class _NewTasksState extends State<NewTasks> {
         _tasks
           ..clear()
           ..addAll(tasks);
+        _focusSessions = focusSessions;
         _nextHabitId = habits.fold<int>(1, (nextId, habit) {
           final id = habit.id ?? 0;
           return id >= nextId ? id + 1 : nextId;
@@ -400,6 +404,7 @@ class _NewTasksState extends State<NewTasks> {
     _tasks,
     now: DateTime.now(),
     coinsSpent: _coinsSpent,
+    focusSessions: _focusSessions,
   );
 
   void _openTaskDetails(int taskId) {
