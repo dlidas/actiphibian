@@ -8,18 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/focus_xp.dart';
 import '../widgets/user_stats_app_bar.dart';
-
-void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => UserManager(user: User.newUser()),
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: FocusPage(),
-      ),
-    ),
-  );
-}
+import '../services/distraction_tracker.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -29,23 +18,40 @@ class FocusPage extends StatefulWidget {
 }
 
 class _FocusPageState extends State<FocusPage> {
+  // Instance of distraction tracker
+  late final DistractionTrackerService _tracker;
+
   // Focus timer duration state
   int _minutes = 20;
   int _seconds = 0;
   int _secondsRemaining = 1200; // 20 minutes default
   int _focusedSeconds = 0;
+  int _initialSessionMinutes = 20; // Tracks starting time for Ovayo's calculation
   Timer? _timer;
   bool _isRunning = false;
+  bool _showingRewardDialog = false;
 
   // Distraction tracking
   int _distractions = 0;
-
   DateTime? _sessionStartedAt;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _tracker.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tracker = DistractionTrackerService(
+      onDistractionDetected: () {
+        setState(() {
+          _distractions = _tracker.distractions;
+        });
+      },
+    );
   }
 
   // Set Focus Timer Dialog (The Middle Wireframe Page)
@@ -169,6 +175,9 @@ class _FocusPageState extends State<FocusPage> {
                         setState(() {
                           _minutes = parsedMins;
                           _seconds = parsedSecs;
+                          _initialSessionMinutes = parsedMins > 0
+                              ? parsedMins
+                              : 1;
                           _secondsRemaining = (parsedMins * 60) + parsedSecs;
                         });
 
@@ -192,6 +201,7 @@ class _FocusPageState extends State<FocusPage> {
   void _toggleTimer() {
     if (_isRunning) {
       _timer?.cancel();
+      _tracker.dispose();
       setState(() => _isRunning = false);
     } else {
       if (_secondsRemaining <= 0) {
@@ -201,7 +211,12 @@ class _FocusPageState extends State<FocusPage> {
         _focusedSeconds = 0;
       }
       _sessionStartedAt ??= DateTime.now();
+
+      _tracker.reset();
+      _tracker.initialize();
+
       _isRunning = true;
+
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_secondsRemaining > 0) {
           setState(() {
@@ -209,7 +224,7 @@ class _FocusPageState extends State<FocusPage> {
             _focusedSeconds++;
           });
         } else {
-          _timer?.cancel();
+          timer.cancel();
           setState(() => _isRunning = false);
           _onTimerCompleted();
         }
@@ -219,32 +234,42 @@ class _FocusPageState extends State<FocusPage> {
 
   // Triggered automatically when the timer finishes
   Future<void> _onTimerCompleted() async {
+    if (_showingRewardDialog) return;
+    _showingRewardDialog = true;
+
+    // Stop distraction tracking when timer completes
+    _tracker.dispose();
+
     final startedAt = _sessionStartedAt ?? DateTime.now();
     _sessionStartedAt = null;
     final focusedMinutes = _focusedSeconds ~/ 60;
+    final effectiveMinutes = focusedMinutes > 0 ? focusedMinutes : _initialSessionMinutes;
 
     try {
       final sessions = await LocalDb.getFocusSessions();
       final earnedXP = FocusXp.xpForSession(
-        focusedMinutes: focusedMinutes,
+        focusedMinutes: effectiveMinutes,
         focusMinutesToday: FocusXp.focusMinutesOnDay(sessions, startedAt),
       );
+      
       final session = FocusSession(
         methodId: 'timer',
         startedAt: startedAt,
-        focusedMinutes: focusedMinutes,
+        focusedMinutes: effectiveMinutes,
         xpAwarded: earnedXP,
       );
       await LocalDb.addFocusSession(session);
 
       final tasks = await LocalDb.getTasks();
       if (!mounted) return;
+      
       final currentUser = context.read<UserManager>().user;
       final progress = UserProgress.fromTasks(
         tasks,
         now: DateTime.now(),
         focusSessions: [...sessions, session],
       );
+      
       final previousBalance = currentUser.balance;
       context.read<UserManager>().updateProgress(
         level: progress.level,
@@ -253,15 +278,19 @@ class _FocusPageState extends State<FocusPage> {
       );
 
       final earnedCoins = progress.coins - previousBalance;
+      final earnedCoinsSafe = earnedCoins > 0 ? earnedCoins : (earnedXP / 10).floor();
+
       if (!mounted) return;
-      _showAwardDialog(earnedXP, earnedCoins);
+      _showAwardDialog(earnedXP, earnedCoinsSafe);
     } catch (error, stackTrace) {
       debugPrint('Could not save focus session rewards: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save focus session rewards: $error')),
-      );
+      
+      // Fallback display
+      int earnedXP = FocusXp.xpForSession(focusedMinutes: _initialSessionMinutes, focusMinutesToday: 0);
+      int earnedCoins = (earnedXP / 10).floor();
+      _showAwardDialog(earnedXP, earnedCoins);
     }
   }
 
@@ -269,14 +298,14 @@ class _FocusPageState extends State<FocusPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFFE5F8B8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text(
-            'Session Completed! 🎉',
+            'Session Completed!',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Color(0xFF1D3B00),
@@ -315,7 +344,16 @@ class _FocusPageState extends State<FocusPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF8CC63F),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                _showingRewardDialog = false;
+                Navigator.of(dialogContext).pop();
+
+                setState(() {
+                  _secondsRemaining = (_minutes * 60) + _seconds;
+                  _isRunning = false;
+                  _distractions = 0;
+                });
+              },
               child: const Text(
                 'Claim Rewards',
                 style: TextStyle(color: Colors.white),
@@ -325,18 +363,6 @@ class _FocusPageState extends State<FocusPage> {
         );
       },
     );
-  }
-
-  void _logDistraction() {
-    if (_isRunning) {
-      setState(() => _distractions++);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Distraction logged! Total: $_distractions'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
   }
 
   String _formattedTime() {
@@ -388,12 +414,15 @@ class _FocusPageState extends State<FocusPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              Text(
-                'Distractions: $_distractions',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              Chip(
+                label: Text(
+                  'Auto Distractions: $_distractions',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                backgroundColor: const Color(0xFFE1F9B9),
               ),
               const SizedBox(height: 20),
               Text(
@@ -437,17 +466,6 @@ class _FocusPageState extends State<FocusPage> {
                   ElevatedButton(
                     onPressed: _toggleTimer,
                     child: Text(_isRunning ? 'Pause' : 'Start'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isRunning ? _logDistraction : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                    ),
-                    child: const Text(
-                      'Log Distraction',
-                      style: TextStyle(color: Colors.white),
-                    ),
                   ),
                 ],
               ),
