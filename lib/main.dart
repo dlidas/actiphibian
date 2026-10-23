@@ -2,8 +2,6 @@ import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/models/user.dart';
 import 'package:flutter/material.dart';
-
-// import 'package:path/path.dart';
 import 'login.dart';
 import 'pages/pages.dart';
 
@@ -17,10 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   //FOR DEBUGGING: RESETS DATABASE - BE CAREFUL
-  // LocalDb.removeDatabase(); //!
-
-  print('--------------------------------------------');
-  print((await LocalDb.getUsers()).toString());
+  // LocalDb.removeDatabase(); //!  
 
   if (await LocalDb.getUser(1) != null) {
     if ((await LocalDb.getUser(1) as User).id != null) {
@@ -153,6 +148,11 @@ class _MainPageState extends State<MainPage> {
     //Update shared user to include id
     // Provider.of<UserManager>(context, listen: false).updateUser(userWithId);
     context.read<UserManager>().updateUser(userWithId);
+
+    //Debug -- TODO: REMOVE BEFORE SUBMISSION
+    // userWithId.balance = 1000;
+    // LocalDb.updateUser(userWithId);
+    // context.read<UserManager>().updateUser(userWithId);
   }
 
   @override

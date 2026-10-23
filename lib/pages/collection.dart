@@ -1,8 +1,11 @@
 import 'package:actiphibian/data/repo.dart';
+import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/models/amphibian.dart';
+import 'package:actiphibian/models/user.dart';
 import 'package:actiphibian/services/gacha.dart';
 import 'package:actiphibian/widgets/pond_message_state.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class CollectionPage extends StatefulWidget {
   const CollectionPage({super.key});
@@ -14,14 +17,22 @@ class CollectionPage extends StatefulWidget {
 class _CollectionPageState extends State<CollectionPage> {
   bool _isGachaVisible = false;
   int _refreshCounter = 0;
-  String? path;
+  Amphibian? amphibian;
   String? _rollError;
+  late int currency;
+  final Map<Rarity, Color> rarityColorMap = {
+    Rarity.common: Colors.grey,
+    Rarity.uncommon: Colors.lightGreen,
+    Rarity.rare: Colors.lightBlue,
+    Rarity.legendary: Colors.yellow
+  };
 
   Future<void> _showPopup() async {
     setState(() {
       _isGachaVisible = true;
       _refreshCounter++;
       _rollError = null;
+      currency = Provider.of<UserManager>(context, listen: false).user.balance;
     });
 
     await showDialog(
@@ -41,28 +52,53 @@ class _CollectionPageState extends State<CollectionPage> {
                     ),
                     margin: const EdgeInsets.all(15),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: path == null
+                          padding: EdgeInsetsGeometry.all(20),
+                          child: (amphibian == null)
                           ? const Icon(Icons.question_mark)
                           : Image.asset(
-                              'assets/images/${path!}',
+                              'assets/images/${amphibian!.filePath}',
                               width: 64,
                               height: 64,
                               fit: BoxFit.contain,
                             ),
-                    ),
+                        ),                    
                   ),
+                  Column(
+                      children: [                        
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: (amphibian == null) 
+                            ? Text('???')
+                            : Column(//Amphibian info
+                              children: [                                
+                                Container(//Rarity
+                                  decoration: BoxDecoration(
+                                    color: rarityColorMap[amphibian!.rarity],
+                                  ),
+                                  padding: EdgeInsets.all(5),
+                                  child: Text(amphibian!.rarity.name.toUpperCase()),
+                                ),
+                                Text(//Amphibian name
+                                  amphibian!.name,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                  )),
+                              ],
+                            ),
+                        ),
+                      ],
+                    ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: ElevatedButton(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: (currency >= 50) ? ElevatedButton(//Roll button
                       onPressed: () async {
                         setDialogueState(() => _rollError = null);
                         try {
-                          final amphibian = await GachaRoller.roll();
-                          await LocalDb.addAmphibian(amphibian);
+                          final amphibianRolled = await GachaRoller.roll();
+                          await LocalDb.addAmphibian(amphibianRolled);
                           if (mounted) setState(() => _refreshCounter++);
                           if (!context.mounted) return;
-                          setDialogueState(() => path = amphibian.filePath);
+                          setDialogueState(() => amphibian = amphibianRolled);
                         } catch (error, stackTrace) {
                           debugPrint('Could not roll for an amphibian: $error');
                           debugPrintStack(stackTrace: stackTrace);
@@ -73,12 +109,31 @@ class _CollectionPageState extends State<CollectionPage> {
                             });
                           }
                         }
+                        //Update currency
+                        User user = Provider.of<UserManager>(context, listen: false).user;
+                        user.balance -= 50;
+                        LocalDb.updateUser(user);
+                        context.read<UserManager>().updateUser(user);
                       },
-                      child: const Text('I\'m feeling lucky'),
+                      child: (amphibian == null) ? const Text('Roll for a new amphibian (\$50)'):
+                        const Text('Roll again! (\$50)'),
+                    ): Column(//Insufficient Funds button
+                      children: [
+                        ElevatedButton(
+                          onPressed: null, 
+                          child: const Text('Insufficient funds! (\$50)'),
+                        ),
+                        Padding(
+                          padding: EdgeInsetsGeometry.symmetric(horizontal: 25, vertical: 10),
+                          child: Center(
+                            child: Text('Complete tasks or focus sessions to earn currency.'),
+                          ),
+                        )
+                      ],
                     ),
                   ),
                   if (_rollError != null)
-                    Padding(
+                    Padding(//Error message
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         _rollError!,
@@ -88,6 +143,13 @@ class _CollectionPageState extends State<CollectionPage> {
                         ),
                       ),
                     ),
+                  TextButton(
+                    onPressed: () {
+                      setDialogueState(() => amphibian = null);
+                      Navigator.pop(context);
+                    }, 
+                    child: const Text('Back')
+                  ),
                 ],
               ),
             );
