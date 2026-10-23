@@ -45,22 +45,46 @@ class Init extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Actiphibian',
-      //===========THEME=================
       theme: ThemeData(
-        colorScheme: ColorScheme(
+        useMaterial3: true,
+        colorScheme: const ColorScheme.light(
           primary: Color(0xFFABE472),
           onPrimary: Color(0xFF1D3B00),
           secondary: Color(0xFFE1F9B9),
           onSecondary: Color(0xFF1D3B00),
           tertiary: Color(0xFFEA9814),
-          onTertiary: Colors.black,
+          onTertiary: Color(0xFF1D3B00),
           surface: Color(0xFFE6FFFA),
-          onSurface: Colors.black,
-          error: Colors.red,
+          onSurface: Color(0xFF1D2B16),
+          error: Color(0xFFBA1A1A),
           onError: Colors.white,
-          brightness: Brightness.light,
         ),
-        iconTheme: IconThemeData(color: Color(0xFF1D3B00)),
+        scaffoldBackgroundColor: const Color(0xFFE6FFFA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFABE472),
+          foregroundColor: Color(0xFF1D3B00),
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFFFFFFFF),
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Color(0xFFE4EBD9)),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF1D3B00)),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1D3B00),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          ),
+        ),
       ),
       // debugShowCheckedModeBanner: false,
       home: isNewUser ? LoginPage() : MainPage(pageIndex: 0),
@@ -79,7 +103,7 @@ class MainApp extends StatelessWidget {
 
 class MainPage extends StatefulWidget {
   final int pageIndex;
-  
+
   const MainPage({super.key, required this.pageIndex});
 
   @override
@@ -88,11 +112,20 @@ class MainPage extends StatefulWidget {
 
 //=======================DO NOT TOUCH=============================
 class _MainPageState extends State<MainPage> {
+  static const _pageTitles = [
+    'Home',
+    'Tasks',
+    'Focus Pond',
+    'Collection',
+    'Calendar',
+    'Profile',
+  ];
+
   int currentPageIndex = 0;
 
   @override
   void initState() {
-    currentPageIndex = widget.pageIndex;
+    currentPageIndex = widget.pageIndex.clamp(0, _pageTitles.length - 1);
     super.initState();
     _loadUser();
   }
@@ -124,26 +157,28 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep tab chrome here so page widgets only provide their content.
     return Scaffold(
-      appBar: UserStatsAppBar(
-        title: 'Actiphibian',
-        actions: <Widget>[
-          //SETTINGS
-          IconButton(
-            icon: Icon(Icons.settings),
-            onPressed: () {
-              //TODO: Implement Settings button
-            },
-          ),
-        ],
-      ),
+      appBar: UserStatsAppBar(title: _pageTitles[currentPageIndex]),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return IconThemeData(color: Colors.red);
+              return const IconThemeData(color: Color(0xFF1D3B00));
             }
-            return IconThemeData(color: Theme.of(context).iconTheme.color);
+            return IconThemeData(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            );
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            return TextStyle(
+              color: states.contains(WidgetState.selected)
+                  ? const Color(0xFF1D3B00)
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            );
           }),
         ),
         child: NavigationBar(
@@ -153,7 +188,7 @@ class _MainPageState extends State<MainPage> {
               currentPageIndex = index;
             });
           },
-          indicatorColor: Theme.of(context).colorScheme.tertiary,
+          indicatorColor: Theme.of(context).colorScheme.secondary,
           selectedIndex: currentPageIndex,
           destinations: const <Widget>[
             //HOME
@@ -197,7 +232,10 @@ class _MainPageState extends State<MainPage> {
       ),
       body: <Widget>[
         //HOME
-        HomePage(),
+        HomePage(
+          onOpenTasks: () => setState(() => currentPageIndex = 1),
+          onOpenFocus: () => setState(() => currentPageIndex = 2),
+        ),
         //TASKS
         TaskPage(),
         //FOCUS

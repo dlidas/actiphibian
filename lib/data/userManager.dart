@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class UserManager extends ChangeNotifier {
   User _user;
 
-  UserManager({required this._user});
+  UserManager({required User user}) : _user = user;
 
   User get user => _user;
 
