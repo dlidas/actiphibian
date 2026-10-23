@@ -1,7 +1,9 @@
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/models/stats.dart';
+import 'package:actiphibian/widgets/pond_message_state.dart';
 import 'package:actiphibian/widgets/user_stats_app_bar.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +15,19 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
+  static const _statisticOptions = [
+    'Tasks Completed',
+    'Tasks Incomplete',
+    'Hours Focused',
+    'Times Distracted',
+    'Currency Earned',
+    'Currency Spent',
+    'XP Gained',
+    'Amphibians Collected',
+    'Longest Streak',
+  ];
+
+  String selectedStatistic = 'XP Gained';
   Statistics? statistics;
   bool isLoading = true;
   Object? loadError;
@@ -31,20 +46,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
     statistics = null;
     loadError = null;
     isLoading = userId != null;
-    _loadStatisticData(userId, ++_loadGeneration);
+    _loadStatistics(userId, ++_loadGeneration);
   }
 
-  Future<void> _loadStatisticData(int? userId, int generation) async {
+  Future<void> _loadStatistics(int? userId, int generation) async {
     if (userId == null) return;
     try {
-      final result = await LocalDb.getStatistics();
-      final userStatistics = result
-          .where((entry) => entry.user_id == userId)
-          .toList();
-
+      final results = await LocalDb.getStatistics();
+      final userResults = results.where((entry) => entry.user_id == userId);
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
-        statistics = userStatistics.isEmpty ? null : userStatistics.first;
+        statistics = userResults.isEmpty ? null : userResults.first;
         isLoading = false;
       });
     } catch (error, stackTrace) {
@@ -64,11 +76,37 @@ class _StatisticsPageState extends State<StatisticsPage> {
       isLoading = _loadedUserId != null;
       loadError = null;
     });
-    _loadStatisticData(_loadedUserId, generation);
+    _loadStatistics(_loadedUserId, generation);
+  }
+
+  double _selectedValue(Statistics stats) {
+    switch (selectedStatistic) {
+      case 'Tasks Completed':
+        return stats.tasks_completed.toDouble();
+      case 'Tasks Incomplete':
+        return stats.tasks_incompleted.toDouble();
+      case 'Hours Focused':
+        return stats.hours_focused ?? 0.0;
+      case 'Times Distracted':
+        return stats.times_distracted.toDouble();
+      case 'Currency Earned':
+        return stats.total_currency_earned.toDouble();
+      case 'Currency Spent':
+        return stats.total_currency_spent.toDouble();
+      case 'XP Gained':
+        return stats.total_xp_gained.toDouble();
+      case 'Amphibians Collected':
+        return stats.total_amphibians_collected.toDouble();
+      case 'Longest Streak':
+        return stats.longest_streak.toDouble();
+      default:
+        return 0;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final stats = statistics;
 
     return Scaffold(
@@ -76,7 +114,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : loadError != null
-          ? _StatisticsMessage(
+          ? PondMessageState(
               icon: Icons.cloud_off_outlined,
               message: 'Statistics could not be loaded.',
               action: TextButton(
@@ -85,7 +123,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             )
           : stats == null
-          ? const _StatisticsMessage(
+          ? const PondMessageState(
               icon: Icons.insights_outlined,
               message: 'Your statistics will appear here as you make progress.',
             )
@@ -93,159 +131,68 @@ class _StatisticsPageState extends State<StatisticsPage> {
               padding: const EdgeInsets.all(20),
               children: [
                 Text(
-                  'Your pond at a glance',
+                  'All-time statistics',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'All-time progress and milestones',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 20),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 600 ? 3 : 2;
-                    final spacing = 12.0;
-                    final tileWidth =
-                        (constraints.maxWidth - spacing * (columns - 1)) /
-                        columns;
-                    final tiles = <_StatisticData>[
-                      _StatisticData(
-                        'Tasks completed',
-                        '${stats.tasks_completed}',
-                        Icons.task_alt,
-                      ),
-                      _StatisticData(
-                        'Tasks incomplete',
-                        '${stats.tasks_incompleted}',
-                        Icons.pending_actions,
-                      ),
-                      _StatisticData(
-                        'Hours focused',
-                        (stats.hours_focused ?? 0).toStringAsFixed(1),
-                        Icons.timer_outlined,
-                      ),
-                      _StatisticData(
-                        'Times distracted',
-                        '${stats.times_distracted}',
-                        Icons.notifications_active_outlined,
-                      ),
-                      _StatisticData(
-                        'Coins earned',
-                        '${stats.total_currency_earned}',
-                        Icons.monetization_on_outlined,
-                      ),
-                      _StatisticData(
-                        'Coins spent',
-                        '${stats.total_currency_spent}',
-                        Icons.shopping_bag_outlined,
-                      ),
-                      _StatisticData(
-                        'XP earned',
-                        '${stats.total_xp_gained}',
-                        Icons.bolt_outlined,
-                      ),
-                      _StatisticData(
-                        'Amphibians collected',
-                        '${stats.total_amphibians_collected}',
-                        Icons.pets_outlined,
-                      ),
-                      _StatisticData(
-                        'Longest streak',
-                        '${stats.longest_streak}',
-                        Icons.local_fire_department_outlined,
-                      ),
-                    ];
-
-                    return Wrap(
-                      spacing: spacing,
-                      runSpacing: spacing,
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        for (final tile in tiles)
-                          SizedBox(
-                            width: tileWidth,
-                            child: _StatisticTile(data: tile),
+                        DropdownButton<String>(
+                          value: selectedStatistic,
+                          isExpanded: true,
+                          items: [
+                            for (final option in _statisticOptions)
+                              DropdownMenuItem(
+                                value: option,
+                                child: Text(option),
+                              ),
+                          ],
+                          onChanged: (String? value) {
+                            if (value != null) {
+                              setState(() => selectedStatistic = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          height: 250,
+                          child: BarChart(
+                            BarChartData(
+                              barGroups: [
+                                BarChartGroupData(
+                                  x: 0,
+                                  barRods: [
+                                    BarChartRodData(
+                                      toY: _selectedValue(stats),
+                                      width: 36,
+                                      color: colors.onPrimary,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            selectedStatistic,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ],
             ),
-    );
-  }
-}
-
-class _StatisticsMessage extends StatelessWidget {
-  final IconData icon;
-  final String message;
-  final Widget? action;
-
-  const _StatisticsMessage({
-    required this.icon,
-    required this.message,
-    this.action,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: colors.primary),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            if (action != null) ...[const SizedBox(height: 8), action!],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatisticData {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StatisticData(this.label, this.value, this.icon);
-}
-
-class _StatisticTile extends StatelessWidget {
-  final _StatisticData data;
-
-  const _StatisticTile({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(data.icon, color: colors.onPrimary),
-            const SizedBox(height: 16),
-            Text(
-              data.value,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(data.label, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        ),
-      ),
     );
   }
 }

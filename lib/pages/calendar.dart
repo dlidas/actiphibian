@@ -3,6 +3,7 @@ import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/task.dart';
 import 'package:actiphibian/widgets/task_calendar.dart';
+import 'package:actiphibian/widgets/pond_message_state.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -67,24 +68,13 @@ class _CalendarPageState extends State<CalendarPage> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _loadError != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Could not load tasks for the calendar.',
-                            ),
-                            const SizedBox(height: 8),
-                            Text(_loadError!, textAlign: TextAlign.center),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadCalendarData,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                  ? PondMessageState(
+                      icon: Icons.cloud_off_outlined,
+                      message: 'Could not load tasks for the calendar.',
+                      details: _loadError,
+                      action: ElevatedButton(
+                        onPressed: _loadCalendarData,
+                        child: const Text('Retry'),
                       ),
                     )
                   : TaskCalendar(tasks: _tasks, habits: _habits),

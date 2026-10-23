@@ -1,5 +1,6 @@
 import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/main.dart';
+import 'package:actiphibian/widgets/pond_action_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'statistics.dart';
@@ -11,143 +12,102 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final userName = context.watch<UserManager>().user.username?.trim();
-    final username = userName == null || userName.isEmpty
-        ? 'Pond friend'
-        : userName;
+    final username = context.watch<UserManager>().user.username?.trim();
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 150,
-                  width: double.infinity,
-                  child: Image.asset(
-                    'assets/images/ProfileBanner.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => ColoredBox(
-                      color: colors.secondary,
-                      child: Icon(
-                        Icons.water,
-                        size: 56,
-                        color: colors.onSecondary,
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 260,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/ProfileBanner.png'),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
+                  CircleAvatar(
+                    radius: 70,
+                    backgroundColor: colors.primary,
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundColor: colors.secondary,
+                      foregroundColor: colors.onSecondary,
+                      child: const Icon(Icons.person, size: 75),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                username == null || username.isEmpty ? 'Pond friend' : username,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Column(
-                    children: [
-                      Transform.translate(
-                        offset: const Offset(0, -32),
-                        child: CircleAvatar(
-                          radius: 38,
-                          backgroundColor: colors.surface,
-                          child: CircleAvatar(
-                            radius: 32,
-                            backgroundColor: colors.secondary,
-                            foregroundColor: colors.onSecondary,
-                            child: const Icon(Icons.person, size: 38),
-                          ),
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: const Offset(0, -20),
-                        child: Text(
-                          username,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: colors.secondary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    'Streak Heat Map',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: colors.onSecondary,
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Your pond',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          _ProfileAction(
-            icon: Icons.insights_outlined,
-            title: 'Statistics',
-            subtitle: 'Review your progress and milestones.',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(builder: (_) => const StatisticsPage()),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ProfileAction(
-            icon: Icons.pets_outlined,
-            title: 'Amphibian collection',
-            subtitle: 'See the friends you have collected.',
-            onTap: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => const MainPage(pageIndex: 3),
               ),
-            ),
+              const SizedBox(height: 20),
+              PondActionCard(
+                icon: Icons.insights_outlined,
+                title: 'Statistics',
+                subtitle: 'Review your progress and milestones.',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const StatisticsPage(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              PondActionCard(
+                icon: Icons.pets_outlined,
+                title: 'Amphibian Collection',
+                subtitle: 'See the friends you have collected.',
+                onTap: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MainPage(pageIndex: 3),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              PondActionCard(
+                icon: Icons.people_outline,
+                title: 'Socials',
+                subtitle: 'Visit your social space.',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SocialsPage(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          _ProfileAction(
-            icon: Icons.people_outline,
-            title: 'Pond mates',
-            subtitle: 'Visit your social space.',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(builder: (_) => const SocialsPage()),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileAction extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ProfileAction({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: colors.secondary,
-          foregroundColor: colors.onSecondary,
-          child: Icon(icon),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(subtitle),
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/models/amphibian.dart';
 import 'package:actiphibian/services/gacha.dart';
+import 'package:actiphibian/widgets/pond_message_state.dart';
 import 'package:flutter/material.dart';
 
 class CollectionPage extends StatefulWidget {
@@ -23,84 +24,69 @@ class _CollectionPageState extends State<CollectionPage> {
       _rollError = null;
     });
 
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogueState) {
-            return Dialog(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'A new pond friend',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondary,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(24),
-                      child: path == null
-                          ? const Icon(Icons.question_mark, size: 48)
-                          : Image.asset(
-                              'assets/images/$path',
-                              width: 64,
-                              height: 64,
-                            ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        setDialogueState(() => _rollError = null);
-                        try {
-                          final amphibian = await GachaRoller.roll();
-
-                          await LocalDb.addAmphibian(amphibian);
-                          if (mounted) {
-                            setState(() => _refreshCounter++);
-                          }
-                          if (!context.mounted) return;
-
-                          setDialogueState(() {
-                            path = amphibian.filePath;
-                          });
-                        } catch (error, stackTrace) {
-                          debugPrint('Could not roll for an amphibian: $error');
-                          debugPrintStack(stackTrace: stackTrace);
-                          if (!context.mounted) return;
-                          setDialogueState(() {
-                            _rollError =
-                                'Could not add a pond friend. Try again.';
-                          });
-                        }
-                      },
-                      child: const Text("I'm feeling lucky"),
-                    ),
-                    if (_rollError != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _rollError!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+    await showDialog(context: context, builder: (BuildContext context) {
+      return StatefulBuilder(builder: (context, setDialogueState) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondary,
+                  shape: BoxShape.circle,
+                ),
+                margin: const EdgeInsets.all(15),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: path == null
+                      ? const Icon(Icons.question_mark)
+                      : Image.asset(
+                          'assets/images/${path!}',
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.contain,
                         ),
-                      ),
-                    ],
-                  ],
                 ),
               ),
-            );
-          },
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    setDialogueState(() => _rollError = null);
+                    try {
+                      final amphibian = await GachaRoller.roll();
+                      await LocalDb.addAmphibian(amphibian);
+                      if (mounted) setState(() => _refreshCounter++);
+                      if (!context.mounted) return;
+                      setDialogueState(() => path = amphibian.filePath);
+                    } catch (error, stackTrace) {
+                      debugPrint('Could not roll for an amphibian: $error');
+                      debugPrintStack(stackTrace: stackTrace);
+                      if (context.mounted) {
+                        setDialogueState(() {
+                          _rollError = 'Could not add a pond friend. Try again.';
+                        });
+                      }
+                    }
+                  },
+                  child: const Text('I\'m feeling lucky'),
+                ),
+              ),
+              if (_rollError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    _rollError!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+            ],
+          ),
         );
-      },
-    );
+      });
+    });
 
     if (mounted) setState(() => _isGachaVisible = false);
   }
@@ -110,19 +96,14 @@ class _CollectionPageState extends State<CollectionPage> {
     return Center(
       child: Scaffold(
         body: Collection(key: ValueKey(_refreshCounter)),
-        floatingActionButton: _isGachaVisible
-            ? null
-            : FloatingActionButton.large(
-                onPressed: () {
-                  //Gacha
-                  _showPopup();
-                },
-                backgroundColor: Theme.of(context).colorScheme.tertiary,
-                foregroundColor: Theme.of(context).colorScheme.onTertiary,
-                shape: const CircleBorder(),
-                tooltip: 'Roll for a new Amphibian',
-                child: const Icon(Icons.add),
-              ),
+        floatingActionButton: _isGachaVisible ? null : FloatingActionButton.large(
+          onPressed: _showPopup,
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
+          foregroundColor: Theme.of(context).colorScheme.onTertiary,
+          shape: const CircleBorder(),
+          tooltip: 'Roll for a new Amphibian',
+          child: const Icon(Icons.add),
+        ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
@@ -142,7 +123,7 @@ class _CollectionState extends State<Collection> {
   @override
   void initState() {
     super.initState();
-    collection = LocalDb.getAmphibians(); //HERE!!!
+    collection = LocalDb.getAmphibians();
   }
 
   Future<void> _reload() async {
@@ -156,50 +137,39 @@ class _CollectionState extends State<Collection> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8),
-      child: FutureBuilder(
+      child: FutureBuilder<List<Amphibian>>(
         future: collection,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off_outlined, size: 48),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Your collection could not be loaded.',
-                      textAlign: TextAlign.center,
-                    ),
-                    TextButton(
-                      onPressed: _reload,
-                      child: const Text('Try again'),
-                    ),
-                  ],
-                ),
+            return PondMessageState(
+              icon: Icons.cloud_off_outlined,
+              message: 'Your collection could not be loaded.',
+              action: TextButton(
+                onPressed: _reload,
+                child: const Text('Try again'),
+              ),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 100),
+                  PondMessageState(
+                    icon: Icons.pets_outlined,
+                    message: 'Your pond friends will appear here.',
+                  ),
+                ],
               ),
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 160),
-                Icon(Icons.pets_outlined, size: 48),
-                SizedBox(height: 12),
-                Center(child: Text('Your pond friends will appear here.')),
-              ],
-            );
-          }
-
           final actualCollection = snapshot.data!;
-
           return RefreshIndicator(
             onRefresh: _reload,
             child: GridView.builder(
@@ -210,11 +180,10 @@ class _CollectionState extends State<Collection> {
                 mainAxisSpacing: 8,
               ),
               itemBuilder: (context, index) {
-                return Card(
-                  color: Theme.of(context).colorScheme.secondary,
-                  clipBehavior: Clip.antiAlias,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
+                return Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: Card(
+                    color: Theme.of(context).colorScheme.secondary,
                     child: AmphibianIcon(amphibian: actualCollection[index]),
                   ),
                 );
@@ -253,6 +222,6 @@ class AmphibianInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Text('Info Placeholder'));
+    return const Center(child: Text('Info Placeholder'));
   }
 }
