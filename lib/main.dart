@@ -54,12 +54,12 @@ class Init extends StatelessWidget {
           onSecondary: Color(0xFF1D3B00),
           tertiary: Color(0xFFEA9814),
           onTertiary: Color(0xFF1D3B00),
-          surface: Color(0xFFF7FBF2),
+          surface: Color(0xFFE6FFFA),
           onSurface: Color(0xFF1D2B16),
           error: Color(0xFFBA1A1A),
           onError: Colors.white,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF7FBF2),
+        scaffoldBackgroundColor: const Color(0xFFE6FFFA),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFFABE472),
           foregroundColor: Color(0xFF1D3B00),
@@ -182,7 +182,7 @@ class _MainPageState extends State<MainPage> {
           }),
         ),
         child: NavigationBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           onDestinationSelected: (int index) {
             setState(() {
               currentPageIndex = index;

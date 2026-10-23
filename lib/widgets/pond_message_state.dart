@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class PondMessageState extends StatelessWidget {
   final IconData icon;
+  final Widget? illustration;
   final String message;
   final String? details;
   final Widget? action;
@@ -9,6 +10,7 @@ class PondMessageState extends StatelessWidget {
   const PondMessageState({
     super.key,
     required this.icon,
+    this.illustration,
     required this.message,
     this.details,
     this.action,
@@ -24,7 +26,7 @@ class PondMessageState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: colors.primary),
+            illustration ?? Icon(icon, size: 48, color: colors.primary),
             const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center),
             if (details != null) ...[
