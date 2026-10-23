@@ -1,3 +1,4 @@
+//Allows the import of all pages with one import
 export 'calendar.dart';
 export 'collection.dart';
 export 'focus.dart';

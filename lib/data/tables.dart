@@ -1,3 +1,4 @@
+//CREATE statements for all the tables
 class Tables {
   static String users() =>
       'CREATE TABLE users('
@@ -18,7 +19,6 @@ class Tables {
       'createdAt TEXT NOT NULL'
       ');';
 
-  // Keep these column names in sync with Task.toMap()/Task.fromMap().
   static String tasks() =>
       'CREATE TABLE tasks('
       'id INTEGER PRIMARY KEY AUTOINCREMENT, '
@@ -50,7 +50,6 @@ class Tables {
       'xpAwarded INTEGER NOT NULL DEFAULT 0'
       ');';
 
-  // Fix the trailing comma in the previous tags schema so a new DB can open.
   static String tags() =>
       'CREATE TABLE tags('
       'id INTEGER PRIMARY KEY AUTOINCREMENT, '

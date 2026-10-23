@@ -1,10 +1,9 @@
 import 'package:actiphibian/data/repo.dart';
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:actiphibian/models/user.dart';
 import 'package:flutter/material.dart';
 import 'login.dart';
 import 'pages/pages.dart';
-
 import 'package:provider/provider.dart';
 import 'services/user_progress.dart';
 import 'widgets/user_stats_app_bar.dart';
@@ -13,9 +12,6 @@ void main() async {
   bool isNewUser = true;
 
   WidgetsFlutterBinding.ensureInitialized();
-
-  //FOR DEBUGGING: RESETS DATABASE - BE CAREFUL
-  // LocalDb.removeDatabase(); //!  
 
   if (await LocalDb.getUser(1) != null) {
     if ((await LocalDb.getUser(1) as User).id != null) {
@@ -81,7 +77,6 @@ class Init extends StatelessWidget {
           ),
         ),
       ),
-      // debugShowCheckedModeBanner: false,
       home: isNewUser ? LoginPage() : MainPage(pageIndex: 0),
     );
   }
@@ -146,13 +141,7 @@ class _MainPageState extends State<MainPage> {
     if (!mounted) return;
 
     //Update shared user to include id
-    // Provider.of<UserManager>(context, listen: false).updateUser(userWithId);
     context.read<UserManager>().updateUser(userWithId);
-
-    //Debug -- TODO: REMOVE BEFORE SUBMISSION
-    // userWithId.balance = 1000;
-    // LocalDb.updateUser(userWithId);
-    // context.read<UserManager>().updateUser(userWithId);
   }
 
   @override

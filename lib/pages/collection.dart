@@ -1,5 +1,5 @@
 import 'package:actiphibian/data/repo.dart';
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:actiphibian/models/amphibian.dart';
 import 'package:actiphibian/models/user.dart';
 import 'package:actiphibian/services/gacha.dart';
@@ -20,6 +20,7 @@ class _CollectionPageState extends State<CollectionPage> {
   Amphibian? amphibian;
   String? _rollError;
   late int currency;
+  //Map Rarities to colors for UI
   final Map<Rarity, Color> rarityColorMap = {
     Rarity.common: Colors.grey,
     Rarity.uncommon: Colors.lightGreen,
@@ -27,6 +28,7 @@ class _CollectionPageState extends State<CollectionPage> {
     Rarity.legendary: Colors.yellow
   };
 
+  //Show Gacha draw window
   Future<void> _showPopup() async {
     setState(() {
       _isGachaVisible = true;
@@ -94,9 +96,11 @@ class _CollectionPageState extends State<CollectionPage> {
                       onPressed: () async {
                         setDialogueState(() => _rollError = null);
                         try {
+                          //roll for random Amphibian
                           final amphibianRolled = await GachaRoller.roll();
                           await LocalDb.addAmphibian(amphibianRolled);
                           if (mounted) setState(() => _refreshCounter++);
+                          //Refresh
                           if (!context.mounted) return;
                           setDialogueState(() => amphibian = amphibianRolled);
                         } catch (error, stackTrace) {
@@ -168,7 +172,7 @@ class _CollectionPageState extends State<CollectionPage> {
         body: Collection(key: ValueKey(_refreshCounter)),
         floatingActionButton: _isGachaVisible
             ? null
-            : FloatingActionButton.large(
+            : FloatingActionButton.large(//Open Gacha menu
                 onPressed: _showPopup,
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
                 foregroundColor: Theme.of(context).colorScheme.onTertiary,
@@ -250,7 +254,7 @@ class _CollectionState extends State<Collection> {
           final actualCollection = snapshot.data!;
           return RefreshIndicator(
             onRefresh: _reload,
-            child: GridView.builder(
+            child: GridView.builder(//Gallery of Amphibians
               itemCount: actualCollection.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
@@ -287,19 +291,8 @@ class _AmphibianIconState extends State<AmphibianIcon> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      onPressed: () {
-        //TODO: Show Information
-      },
+      onPressed: null,
       icon: Image.asset('assets/images/${widget.amphibian.filePath}'),
     );
-  }
-}
-
-class AmphibianInfo extends StatelessWidget {
-  const AmphibianInfo({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Info Placeholder'));
   }
 }

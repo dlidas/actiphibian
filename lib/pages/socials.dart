@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../widgets/user_stats_app_bar.dart';
 
+//Preview of social page
 class SocialsPage extends StatelessWidget {
   const SocialsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Temp data
+    
     final pondMates = ['Frog Knight', 'Amphibian Queen'];
 
     return Scaffold(

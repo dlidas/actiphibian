@@ -2,6 +2,10 @@
 
 Actiphibian is an amphibian themed productivity app built with Flutter. Plan tasks and habits, focus with a timer, earn experience and coins, and grow an amphibian collection.
 
+## Demo video link
+
+Watch a demo of the prototype [here](https://drive.google.com/file/d/1izKtIO3njXk4LXup9CjTv_tGe0aKs86_/view?usp=sharing).
+
 ## Features
 
 **Home** gives quick access to tasks and focus sessions.

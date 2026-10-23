@@ -1,4 +1,4 @@
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

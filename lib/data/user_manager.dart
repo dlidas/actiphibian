@@ -1,6 +1,8 @@
 import 'package:actiphibian/models/user.dart';
 import 'package:flutter/material.dart';
 
+//UserManager manages the SharedData for the User, allowing User to be
+//accessible from any page
 class UserManager extends ChangeNotifier {
   User _user;
 

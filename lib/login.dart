@@ -1,5 +1,5 @@
 import 'package:actiphibian/data/repo.dart';
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:flutter/material.dart';
 import 'main.dart';
 import 'models/user.dart';
@@ -64,23 +64,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
-            //Password input
-            // Padding(
-            //   padding: const EdgeInsets.only(
-            //     left: 15.0, 
-            //     right: 15.0, 
-            //     top: 15.0, 
-            //     bottom: 0,
-            //   ),
-            //   child: TextField(
-            //     obscureText: true,
-            //     decoration: InputDecoration(
-            //       border: OutlineInputBorder(),
-            //       labelText: 'Password',
-            //     ),
-            //   ),
-            // ),
-
             //Login button
             SizedBox(
               height: 65,
@@ -120,11 +103,6 @@ class _LoginPageState extends State<LoginPage> {
                       //Save user to local db
                       LocalDb.addUser(Provider.of<UserManager>(context, listen: false).user);
 
-                      // User userFromDb = (await LocalDb.getUsers()).last;
-
-                      //Instantiate user's collection table
-                      // LocalDb.addCollection(userFromDb.id!);
-
                       //Send to Home page
                       Navigator.pushReplacement(context, 
                         MaterialPageRoute(builder: (context) => MainApp()));
@@ -138,35 +116,6 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(
               height: 50,
             ),
-
-            //Forgot password
-            // SizedBox(
-            //   child: Center(
-            //     child: Row(
-            //       children: [
-            //         Padding(
-            //           padding: const EdgeInsets.only(left: 62),
-            //           child: Text('Forgot password?'),
-            //         ),
-            //         Padding(
-            //           padding: const EdgeInsets.only(left: 1.0),
-            //           child: InkWell(
-            //             onTap: () {
-            //               print('hello');
-            //             },
-            //             child: Text(
-            //               'Get help logging in',
-            //               style: TextStyle(
-            //                 fontSize: 14,
-            //                 color: Colors.blue,
-            //               ),
-            //             ),
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
           ],
         ),
       ),

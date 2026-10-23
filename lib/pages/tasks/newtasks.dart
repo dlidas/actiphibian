@@ -5,7 +5,7 @@ import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/focus_session.dart';
 import 'package:actiphibian/models/task.dart';
 import 'package:actiphibian/data/repo.dart';
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:actiphibian/utils/task_parsers.dart';
 import 'package:actiphibian/utils/task_creation_logger.dart';

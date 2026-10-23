@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:actiphibian/data/repo.dart';
-import 'package:actiphibian/data/userManager.dart';
+import 'package:actiphibian/data/user_manager.dart';
 import 'package:actiphibian/models/focus_session.dart';
 import 'package:actiphibian/services/user_progress.dart';
 import 'package:flutter/material.dart';

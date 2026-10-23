@@ -2,73 +2,60 @@ import 'package:actiphibian/models/mappable.dart';
 
 class Statistics implements IMappable{
   int id;
-  late int tasks_completed;
-  late int tasks_incompleted;
-  late double? hours_focused;
-  late int times_distracted;
-  late int total_currency_earned;
-  late int total_currency_spent;
-  late int total_xp_gained;
-  late int total_amphibians_collected;
-  late int longest_streak;
-  late int user_id;
+  late int tasksCompleted;
+  late int tasksincompleted;
+  late double? hoursfocused;
+  late int timesdistracted;
+  late int totalcurrencyearned;
+  late int totalcurrencyspent;
+  late int totalxpgained;
+  late int totalamphibianscollected;
+  late int longeststreak;
+  late int userid;
 
   Statistics({
     required this.id, 
-    required this.tasks_completed, 
-    required this.tasks_incompleted, 
-    required this.hours_focused, 
-    required this.times_distracted,
-    required this.total_currency_earned,
-    required this.total_currency_spent,
-    required this.total_xp_gained,
-    required this.total_amphibians_collected,
-    required this.longest_streak,
-    required this.user_id
+    required this.tasksCompleted, 
+    required this.tasksincompleted, 
+    required this.hoursfocused, 
+    required this.timesdistracted,
+    required this.totalcurrencyearned,
+    required this.totalcurrencyspent,
+    required this.totalxpgained,
+    required this.totalamphibianscollected,
+    required this.longeststreak,
+    required this.userid
   });
-
-  // Statistics.newStatistic() {
-  //   tasks_completed = 0;
-  //   tasks_incompleted = 0;
-  //   hours_focused = 0;
-  //   times_distracted = 0;
-  //   total_currency_earned = 0;
-  //   total_currency_spent = 0;
-  //   total_xp_gained = 0;
-  //   total_amphibians_collected = 0;
-  //   longest_streak = 0;
-  //   user_id = 0;
-  // }
   
   factory Statistics.fromMap(Map<String, Object?> map) {
     return Statistics(
       id: map['id'] as int,
-      tasks_completed: map['tasks_completed'] as int,
-      tasks_incompleted: map['tasks_incompleted'] as int,
-      hours_focused: map['hours_focused'] as double,
-      times_distracted: map['times_distracted'] as int,
-      total_currency_earned: map['total_currency_earned'] as int,
-      total_currency_spent: map['total_currency_spent'] as int,
-      total_xp_gained: map['total_xp_gained'] as int,
-      total_amphibians_collected: map['total_amphibians_collected'] as int,
-      longest_streak: map['longest_streak'] as int,
-      user_id: map['user_id'] as int
+      tasksCompleted: map['tasks_completed'] as int,
+      tasksincompleted: map['tasksincompleted'] as int,
+      hoursfocused: map['hoursfocused'] as double,
+      timesdistracted: map['timesdistracted'] as int,
+      totalcurrencyearned: map['totalcurrencyearned'] as int,
+      totalcurrencyspent: map['totalcurrencyspent'] as int,
+      totalxpgained: map['totalxpgained'] as int,
+      totalamphibianscollected: map['totalamphibianscollected'] as int,
+      longeststreak: map['longeststreak'] as int,
+      userid: map['userid'] as int
     );
   }
 
   @override
   Map<String, Object?> toMap() {
     return {
-      'tasks_completed': tasks_completed, 
-      'tasks_incompleted': tasks_incompleted, 
-      'hours_focused': hours_focused, 
-      'times_distracted': times_distracted,
-      'total_currency_earned': total_currency_earned,
-      'total_currency_spent': total_currency_spent,
-      'total_xp_gained': total_xp_gained,
-      'total_amphibians_collected': total_amphibians_collected,
-      'longest_streak': longest_streak,
-      'user_id': user_id,
+      'tasks_completed': tasksCompleted, 
+      'tasksincompleted': tasksincompleted, 
+      'hoursfocused': hoursfocused, 
+      'timesdistracted': timesdistracted,
+      'totalcurrencyearned': totalcurrencyearned,
+      'totalcurrencyspent': totalcurrencyspent,
+      'totalxpgained': totalxpgained,
+      'totalamphibianscollected': totalamphibianscollected,
+      'longeststreak': longeststreak,
+      'userid': userid,
     };
   }
 }
