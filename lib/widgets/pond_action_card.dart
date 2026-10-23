@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class PondActionCard extends StatelessWidget {
   final IconData icon;
+  final Widget? leading;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -9,6 +10,7 @@ class PondActionCard extends StatelessWidget {
   const PondActionCard({
     super.key,
     required this.icon,
+    this.leading,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -24,7 +26,7 @@ class PondActionCard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: colors.secondary,
           foregroundColor: colors.onSecondary,
-          child: Icon(icon),
+          child: leading ?? Icon(icon),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Padding(

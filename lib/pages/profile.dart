@@ -48,9 +48,9 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 username == null || username.isEmpty ? 'Pond friend' : username,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
               Container(
@@ -62,10 +62,7 @@ class ProfilePage extends StatelessWidget {
                 child: Center(
                   child: Text(
                     'Streak Heat Map',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: colors.onSecondary,
-                    ),
+                    style: TextStyle(fontSize: 18, color: colors.onSecondary),
                   ),
                 ),
               ),
@@ -84,6 +81,12 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 12),
               PondActionCard(
                 icon: Icons.pets_outlined,
+                leading: Image.asset(
+                  'assets/images/placeholder-frog-icon.png',
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.contain,
+                ),
                 title: 'Amphibian Collection',
                 subtitle: 'See the friends you have collected.',
                 onTap: () => Navigator.pushReplacement(
@@ -100,9 +103,7 @@ class ProfilePage extends StatelessWidget {
                 subtitle: 'Visit your social space.',
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SocialsPage(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const SocialsPage()),
                 ),
               ),
             ],
