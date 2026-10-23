@@ -248,49 +248,50 @@ class LocalDb {
     return rows.map(Amphibian.fromMap).toList();
   }
 
-  // static Future<Statistics?> getStatistics(int id) async {
-  //   final db = await database;
-
-  //   final stats = await db.rawQuery('SELECT * FROM statistics WHERE id = ?', [id]);
-
-  //   if (stats.isEmpty) return null;
-
-  //   return Statistics.fromMap(stats.first);
-  // }
-
   static Future<List<Statistics>> getStatistics() async {
     final db = await database;
     final rows = await db.query('statistics');
     return rows.map(Statistics.fromMap).toList();
   }
 
-  // static Future<Statistics?> getDailyStatistics(int id) async {
-  //   final db = await database;
+  static Future<int> getTaskCount() async {
+    final db = await database;
+    final rows = await db.query(
+      'tasks',
+      columns: ['COUNT(*) AS total'],
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
 
-  //   final daily = await db.rawQuery('SELECT * FROM dailyStatistics WHERE id = ?', [id]);
+  static Future<int> getCompleteTaskCount() async {
+    final db = await database;
+    final rows = await db.query(
+      'tasks',
+      columns: ['COUNT(*) AS total'],
+      where: 'status != ?',
+      whereArgs: ['active'],
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
 
-  //   if (daily.isEmpty) return null;
+  static Future<int> getIncompleteTaskCount() async {
+    final db = await database;
+    final rows = await db.query(
+      'tasks',
+      columns: ['COUNT(*) AS total'],
+      where: 'status = ?',
+      whereArgs: ['active'],
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
 
-  //   return Statistics.fromMap(daily.first);
-  // }
-
-  // static Future<Statistics?> getWeeklyStatistics(int id) async {
-  //   final db = await database;
-
-  //   final weekly = await db.rawQuery('SELECT * FROM weeklyStatistics WHERE id = ?', [id]);
-
-  //   if (weekly.isEmpty) return null;
-
-  //   return Statistics.fromMap(weekly.first);
-  // }
-
-  // static Future<Statistics?> getMonthlyStatistics(int id) async {
-  //   final db = await database;
-
-  //   final monthly = await db.rawQuery('SELECT * FROM monthlyStatistics WHERE id = ?', [id]);
-
-  //   if (monthly.isEmpty) return null;
-
-  //   return Statistics.fromMap(monthly.first);
-  // }
+  static Future<int> getTotalAmphibians() async {
+    final db = await database;
+    final rows = await db.query(
+      'amphibians',
+      columns: ['COUNT(*) AS total'],
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
+  
 }

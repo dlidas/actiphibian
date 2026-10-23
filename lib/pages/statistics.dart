@@ -1,10 +1,7 @@
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
-import 'package:actiphibian/models/stats.dart';
-import 'package:actiphibian/widgets/pond_message_state.dart';
-import 'package:actiphibian/widgets/user_stats_app_bar.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 
 class StatisticsPage extends StatefulWidget {
@@ -15,186 +12,292 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-  static const _statisticOptions = [
-    'Tasks Completed',
-    'Tasks Incomplete',
-    'Hours Focused',
-    'Times Distracted',
-    'Currency Earned',
-    'Currency Spent',
-    'XP Gained',
-    'Amphibians Collected',
-    'Longest Streak',
-  ];
+  String selectedStatistic = "XP";
 
-  String selectedStatistic = 'XP Gained';
-  Statistics? statistics;
+  int xp = 0;
+  int balance = 0;
+  int tasksCreated = 0;
+  int tasksCompleted = 0;
+  int tasksIncompleted = 0;
+  int amphibianCount = 0;
+
   bool isLoading = true;
-  Object? loadError;
-  int? _loadedUserId;
-  bool _hasObservedUserId = false;
-  // Ignore results from earlier requests if the active user changes mid-load.
-  int _loadGeneration = 0;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final userId = Provider.of<UserManager>(context).user.id;
-    if (_hasObservedUserId && userId == _loadedUserId) return;
-
-    _hasObservedUserId = true;
-    _loadedUserId = userId;
-    statistics = null;
-    loadError = null;
-    isLoading = userId != null;
-    _loadStatistics(userId, ++_loadGeneration);
+  void initState() {
+    super.initState();
+    loadStatisticData();
   }
 
-  Future<void> _loadStatistics(int? userId, int generation) async {
-    if (userId == null) return;
-    try {
-      final results = await LocalDb.getStatistics();
-      final userResults = results.where((entry) => entry.user_id == userId);
-      if (!mounted || generation != _loadGeneration) return;
+  // Gets the statistical data from the database to display on the bar charts
+  Future<void> loadStatisticData() async {
+    final int? id = context.read<UserManager>().user.id;
+    final user = context.read<UserManager>().user;
+
+    if (id == null) {
+      if (!mounted) return;
       setState(() {
-        statistics = userResults.isEmpty ? null : userResults.first;
         isLoading = false;
       });
-    } catch (error, stackTrace) {
-      debugPrint('Could not load statistics: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      if (!mounted || generation != _loadGeneration) return;
-      setState(() {
-        loadError = error;
-        isLoading = false;
-      });
+      return;
     }
-  }
 
-  void _retryLoad() {
-    final generation = ++_loadGeneration;
+    final xpTotal = user.xp;
+    final balanceTotal = user.balance;
+    final taskCount = await LocalDb.getTaskCount();
+    final completeCount = await LocalDb.getCompleteTaskCount();
+    final incompleteCount = await LocalDb.getIncompleteTaskCount();
+    final amphibianTotal = await LocalDb.getTotalAmphibians();
+
+    if (!mounted) return;
+
     setState(() {
-      isLoading = _loadedUserId != null;
-      loadError = null;
+      xp = xpTotal;
+      balance = balanceTotal;
+      tasksCreated = taskCount;
+      tasksCompleted = completeCount;
+      tasksIncompleted = incompleteCount;
+      amphibianCount = amphibianTotal;
+      isLoading = false;
     });
-    _loadStatistics(_loadedUserId, generation);
   }
 
-  double _selectedValue(Statistics stats) {
+  // Determines which statistical data will be displayed
+  // if their corrosponding choice is selected in the dropdown
+  List<double> getSelectedData() {
     switch (selectedStatistic) {
-      case 'Tasks Completed':
-        return stats.tasks_completed.toDouble();
-      case 'Tasks Incomplete':
-        return stats.tasks_incompleted.toDouble();
-      case 'Hours Focused':
-        return stats.hours_focused ?? 0.0;
-      case 'Times Distracted':
-        return stats.times_distracted.toDouble();
-      case 'Currency Earned':
-        return stats.total_currency_earned.toDouble();
-      case 'Currency Spent':
-        return stats.total_currency_spent.toDouble();
-      case 'XP Gained':
-        return stats.total_xp_gained.toDouble();
-      case 'Amphibians Collected':
-        return stats.total_amphibians_collected.toDouble();
-      case 'Longest Streak':
-        return stats.longest_streak.toDouble();
+      case "XP":
+        return [xp.toDouble()];
+      case "Balance":
+        return [balance.toDouble()];
+      case "Tasks Created":
+        return [tasksCreated.toDouble()];
+      case "Tasks Completed":
+        return [tasksCompleted.toDouble()];
+      case "Tasks Incompleted":
+        return [tasksIncompleted.toDouble()];
+      case "Total Amphibians":
+        return [amphibianCount.toDouble()];
       default:
-        return 0;
+        return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final stats = statistics;
+    final List<double> chartData = getSelectedData();
 
     return Scaffold(
-      appBar: const UserStatsAppBar(title: 'Statistics'),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : loadError != null
-          ? PondMessageState(
-              icon: Icons.cloud_off_outlined,
-              message: 'Statistics could not be loaded.',
-              action: TextButton(
-                onPressed: _retryLoad,
-                child: const Text('Try again'),
+      appBar: AppBar(
+        title: const Text("Statistics"),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Choose Statistic",
+                style: TextStyle(fontSize: 24),
               ),
-            )
-          : stats == null
-          ? const PondMessageState(
-              icon: Icons.insights_outlined,
-              message: 'Your statistics will appear here as you make progress.',
-            )
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                // The database stores cumulative totals, not per-period values.
-                Text(
-                  'All-time statistics',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+              // The dropdown allows a user to select which statistic they wish to see
+              DropdownButton<String>(
+                value: selectedStatistic,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(
+                    value: "XP",
+                    child: Text("XP"),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        DropdownButton<String>(
-                          value: selectedStatistic,
-                          isExpanded: true,
-                          items: [
-                            for (final option in _statisticOptions)
-                              DropdownMenuItem(
-                                value: option,
-                                child: Text(option),
-                              ),
-                          ],
-                          onChanged: (String? value) {
-                            if (value != null) {
-                              setState(() => selectedStatistic = value);
-                            }
-                          },
+                  DropdownMenuItem(
+                    value: "Balance",
+                    child: Text("Balance"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Tasks Created",
+                    child: Text("Tasks Created"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Tasks Completed",
+                    child: Text("Tasks Completed"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Tasks Incompleted",
+                    child: Text("Tasks Incompleted"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Total Amphibians",
+                    child: Text("Total Amphibians"),
+                  ),
+                ],
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      selectedStatistic = newValue;
+                    });
+                  }
+                },
+              ),
+
+              // Daily Statistics display using a bar chart
+              const Text(
+                "Daily Statistics",
+                style: TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 250,
+                child: BarChart(
+                  BarChartData(
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        axisNameWidget: Text(selectedStatistic),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
                         ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 250,
-                          child: BarChart(
-                            BarChartData(
-                              barGroups: [
-                                BarChartGroupData(
-                                  x: 0,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: _selectedValue(stats),
-                                      width: 36,
-                                      color: colors.onPrimary,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        axisNameWidget: const Text("Days"),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    barGroups: List.generate(
+                      chartData.length,
+                      (index) => BarChartGroupData(
+                        x: index + 1,
+                        barRods: [
+                          BarChartRodData(
+                            toY: chartData[index],
+                            width: 20,
+                            color: Colors.blueGrey,
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            selectedStatistic,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // Weekly Statistics display using a bar chart
+              const Text(
+                "Weekly Statistics",
+                style: TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 250,
+                child: BarChart(
+                  BarChartData(
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        axisNameWidget: Text(selectedStatistic),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        axisNameWidget: const Text("Days"),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    barGroups: List.generate(
+                      7,
+                      (index) => BarChartGroupData(
+                        x: index + 1,
+                        barRods: [
+                          BarChartRodData(
+                            toY: index < chartData.length
+                                ? chartData[index]
+                                : 0.0,
+                            width: 20,
+                            color: Colors.blueGrey,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Monthly Statistics display using a bar chart
+              const Text(
+                "Monthly Statistics",
+                style: TextStyle(fontSize: 20),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 250,
+                child: BarChart(
+                  BarChartData(
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        axisNameWidget: Text(selectedStatistic),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        axisNameWidget: const Text("Days"),
+                        axisNameSize: 30,
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    // The list will be limited to 7, same as the weekly, since the numbers overflow otherwise
+                    barGroups: List.generate(
+                      7,
+                      (index) => BarChartGroupData(
+                        x: index + 1,
+                        barRods: [
+                          BarChartRodData(
+                            toY: index < chartData.length
+                                ? chartData[index]
+                                : 0.0,
+                            width: 20,
+                            color: Colors.blueGrey,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
