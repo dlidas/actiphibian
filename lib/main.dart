@@ -157,6 +157,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep tab chrome here so page widgets only provide their content.
     return Scaffold(
       appBar: UserStatsAppBar(title: _pageTitles[currentPageIndex]),
       bottomNavigationBar: NavigationBarTheme(

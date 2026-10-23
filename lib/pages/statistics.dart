@@ -33,6 +33,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Object? loadError;
   int? _loadedUserId;
   bool _hasObservedUserId = false;
+  // Ignore results from earlier requests if the active user changes mid-load.
   int _loadGeneration = 0;
 
   @override
@@ -130,6 +131,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                // The database stores cumulative totals, not per-period values.
                 Text(
                   'All-time statistics',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
