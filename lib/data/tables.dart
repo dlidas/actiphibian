@@ -34,6 +34,7 @@ class Tables {
       'xpAwarded INTEGER NOT NULL DEFAULT 0, '
       'completedAt TEXT, '
       'habitId INTEGER, '
+      'recurringSeriesId TEXT, '
       'remoteId TEXT, '
       'isSynced INTEGER NOT NULL DEFAULT 0, '
       'createdAt TEXT NOT NULL, '

@@ -21,7 +21,7 @@ class LocalDb {
   static Future<Database> _initialiseDb() async {
     return openDatabase(
       join(await getDatabasesPath(), 'actiphibian.db'),
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute(Tables.users());
         await db.execute(Tables.habits());
@@ -47,6 +47,13 @@ class LocalDb {
         }
         if (oldVersion < 3) {
           await db.execute(Tables.focusSessions());
+        }
+        if (oldVersion < 4) {
+          // Give every recurring series a stable identity. Existing rows are
+          // left null and the task screen assigns IDs to active legacy series.
+          await db.execute(
+            'ALTER TABLE tasks ADD COLUMN recurringSeriesId TEXT',
+          );
         }
       },
     );
