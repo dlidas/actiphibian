@@ -7,7 +7,6 @@ import 'package:actiphibian/services/user_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/focus_xp.dart';
-import '../widgets/user_stats_app_bar.dart';
 
 void main() {
   runApp(
@@ -62,7 +61,7 @@ class _FocusPageState extends State<FocusPage> {
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          backgroundColor: const Color(0xFFE5F8B8),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -75,7 +74,7 @@ class _FocusPageState extends State<FocusPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8CC63F),
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Center(
@@ -160,7 +159,7 @@ class _FocusPageState extends State<FocusPage> {
                     const SizedBox(width: 8),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8CC63F),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                       ),
                       onPressed: () {
                         int parsedMins = int.tryParse(minController.text) ?? 0;
@@ -271,7 +270,7 @@ class _FocusPageState extends State<FocusPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFFE5F8B8),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -313,7 +312,7 @@ class _FocusPageState extends State<FocusPage> {
           actions: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8CC63F),
+                backgroundColor: Theme.of(context).colorScheme.primary,
               ),
               onPressed: () => Navigator.pop(context),
               child: const Text(
@@ -349,43 +348,23 @@ class _FocusPageState extends State<FocusPage> {
   Widget build(BuildContext context) {
     final user = context.watch<UserManager>().user;
     return Scaffold(
-      appBar: const UserStatsAppBar(title: 'Focus Pond'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Display Live Balances
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Chip(
-                    avatar: const Icon(
-                      Icons.monetization_on,
-                      color: Colors.amber,
-                      size: 18,
-                    ),
-                    label: Text(
-                      '${user.balance} Coins',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: const Color(0xFFE5F8B8),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    avatar: const Icon(
-                      Icons.bolt,
-                      color: Colors.orange,
-                      size: 18,
-                    ),
-                    label: Text(
-                      '${user.xp} XP',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: const Color(0xFFE5F8B8),
-                  ),
-                ],
+              Chip(
+                avatar: Icon(
+                  Icons.bolt,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  size: 18,
+                ),
+                label: Text(
+                  '${user.xp} XP earned',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.secondary,
               ),
               const SizedBox(height: 20),
               Text(
@@ -412,7 +391,8 @@ class _FocusPageState extends State<FocusPage> {
                     : 'Timer settings are locked until this session ends',
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8CC63F),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
@@ -421,11 +401,8 @@ class _FocusPageState extends State<FocusPage> {
                   onPressed: _sessionStartedAt == null
                       ? _showSetFocusTimerDialog
                       : null,
-                  label: const Text(
-                    'Set Focus Timer',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  icon: const Icon(Icons.edit_calendar, color: Colors.white),
+                  label: const Text('Set Focus Timer'),
+                  icon: const Icon(Icons.edit_calendar),
                 ),
               ),
 
@@ -442,12 +419,10 @@ class _FocusPageState extends State<FocusPage> {
                   ElevatedButton(
                     onPressed: _isRunning ? _logDistraction : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Theme.of(context).colorScheme.tertiary,
+                      foregroundColor: Theme.of(context).colorScheme.onTertiary,
                     ),
-                    child: const Text(
-                      'Log Distraction',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    child: const Text('Log Distraction'),
                   ),
                 ],
               ),
