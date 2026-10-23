@@ -2,12 +2,10 @@ import 'dart:async';
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/userManager.dart';
 import 'package:actiphibian/models/focus_session.dart';
-import 'package:actiphibian/models/user.dart';
 import 'package:actiphibian/services/user_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/focus_xp.dart';
-import '../widgets/user_stats_app_bar.dart';
 import '../services/distraction_tracker.dart';
 
 class FocusPage extends StatefulWidget {

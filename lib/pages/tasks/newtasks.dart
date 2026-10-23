@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:actiphibian/models/habit.dart';
 import 'package:actiphibian/models/focus_session.dart';
@@ -41,17 +42,23 @@ class _NewTasksState extends State<NewTasks> {
     'Music',
   ];
 
+  String _newRecurringSeriesId() {
+    final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final nonce = math.Random.secure().nextInt(1 << 32).toRadixString(36);
+    return 'series-$timestamp-$nonce';
+  }
+
   Habit _createHabit(String name) {
     // The current dialog expects a synchronous callback, so assign a local ID
     // immediately and queue the matching SQLite write before saving its task.
     final habit = Habit(id: _nextHabitId++, name: name);
     if (mounted) setState(() => _habits.add(habit));
 
-    final write = LocalDb.addHabit(habit)
-        .then<void>((_) {})
-        .catchError((Object error) {
-          _habitWriteError = error.toString();
-        });
+    final write = LocalDb.addHabit(habit).then<void>((_) {}).catchError((
+      Object error,
+    ) {
+      _habitWriteError = error.toString();
+    });
     _pendingHabitWrites.add(write);
     return habit;
   }
@@ -66,7 +73,24 @@ class _NewTasksState extends State<NewTasks> {
         }
         habits = await LocalDb.getHabits();
       }
-      final tasks = await LocalDb.getTasks();
+      final storedTasks = await LocalDb.getTasks();
+      final tasks = <Task>[];
+      for (final task in storedTasks) {
+        // Older database versions did not store series identity. Start each
+        // currently active legacy recurrence as its own series to avoid
+        // accidentally merging two separate tasks with the same title.
+        if (task.isRecurring &&
+            task.status == 'active' &&
+            task.recurringSeriesId == null) {
+          final identifiedTask = task.copyWith(
+            recurringSeriesId: _newRecurringSeriesId(),
+          );
+          await LocalDb.updateTask(identifiedTask);
+          tasks.add(identifiedTask);
+        } else {
+          tasks.add(task);
+        }
+      }
       final focusSessions = await LocalDb.getFocusSessions();
       if (!mounted) return;
 
@@ -85,7 +109,7 @@ class _NewTasksState extends State<NewTasks> {
         _isLoading = false;
       });
       _syncProgressToUserManager();
-      _flagNewlyMissedTasks();
+      unawaited(_flagNewlyMissedTasks());
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -106,8 +130,9 @@ class _NewTasksState extends State<NewTasks> {
 
   void _reportDatabaseError(String message, Object error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$message: $error')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$message: $error')));
   }
 
   void _saveTaskSilently(Task task) {
@@ -124,7 +149,7 @@ class _NewTasksState extends State<NewTasks> {
     return 'None';
   }
 
-  // Coins earned are derived from total XP, so only spending needs storing.
+  // Coins earned are derived from total XP, so only spendable coins needs storing and not the total cummulative coins user has earned.
   final int _coinsSpent = 0;
 
   void _syncProgressToUserManager() {
@@ -143,7 +168,7 @@ class _NewTasksState extends State<NewTasks> {
     super.initState();
     _loadData();
     _missedCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!_isLoading) _flagNewlyMissedTasks();
+      if (!_isLoading) unawaited(_flagNewlyMissedTasks());
     });
   }
 
@@ -170,12 +195,13 @@ class _NewTasksState extends State<NewTasks> {
       recurrenceFrequency: result.recurrenceFrequency,
       difficulty: result.difficulty,
       habitId: result.habitId,
+      recurringSeriesId: result.recurring && result.recurrenceFrequency != null
+          ? _newRecurringSeriesId()
+          : null,
     );
 
     late final Task newTask;
     try {
-      // A task might refer to a habit created inside the same dialog. Make
-      // sure that habit's insert finishes before storing the task.
       await _waitForPendingHabitWrites();
       final taskId = await LocalDb.addTask(taskDraft);
       newTask = taskDraft.copyWith(id: taskId);
@@ -235,8 +261,34 @@ class _NewTasksState extends State<NewTasks> {
     );
   }
 
+  // Match edited subtasks to their previous versions by normalized text. This
+  // keeps checkmarks for unchanged subtasks while new subtasks start unchecked.
+  // Matching one old item at a time also handles duplicate subtask labels.
+  List<Subtask> _preserveSubtaskProgress(
+    List<Subtask> existing,
+    List<Subtask> edited,
+  ) {
+    String key(String value) =>
+        value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+
+    final unmatched = List<Subtask>.of(existing);
+    return edited.map((candidate) {
+      final normalizedText = key(candidate.text);
+      final matchIndex = unmatched.indexWhere(
+        (previous) => key(previous.text) == normalizedText,
+      );
+      if (matchIndex == -1) {
+        return candidate.copyWith(isDone: false);
+      }
+      final previous = unmatched.removeAt(matchIndex);
+      return candidate.copyWith(isDone: previous.isDone);
+    }).toList();
+  }
+
   Future<void> _showEditTaskDialog(int index) async {
+    if (index < 0 || index >= _tasks.length) return;
     final task = _tasks[index];
+    if (!_isTaskInteractable(task, DateTime.now())) return;
     final result = await showTaskFormDialog(
       context,
       habits: _habits,
@@ -245,32 +297,160 @@ class _NewTasksState extends State<NewTasks> {
     );
     if (result == null || !mounted) return;
 
-    final i = _tasks.indexWhere((t) => t.id == task.id);
-    if (i == -1) return;
+    var currentIndex = _tasks.indexWhere((t) => t.id == task.id);
+    if (currentIndex == -1) return;
 
     try {
       await _waitForPendingHabitWrites();
-      final updatedTask = _tasks[i].copyWith(
+      currentIndex = _tasks.indexWhere((t) => t.id == task.id);
+      if (currentIndex == -1) return;
+      final currentTask = _tasks[currentIndex];
+      // The task could have passed its deadline while the edit dialog was open.
+      if (!_isTaskInteractable(currentTask, DateTime.now())) {
+        unawaited(_flagNewlyMissedTasks());
+        return;
+      }
+      final editedSubtasks = TaskParsers.parseSubtasks(result.subtasksRaw);
+      final remainsRecurring =
+          result.recurring && result.recurrenceFrequency != null;
+      final recurringSeriesId = remainsRecurring
+          ? (currentTask.isRecurring && currentTask.recurringSeriesId != null
+                ? currentTask.recurringSeriesId
+                : _newRecurringSeriesId())
+          : null;
+      final updatedTask = currentTask.copyWith(
         // An explicit null clears a field (habit, duration, frequency).
         description: result.description,
-        subtasks: TaskParsers.parseSubtasks(result.subtasksRaw),
+        subtasks: _preserveSubtaskProgress(
+          currentTask.subtasks,
+          editedSubtasks,
+        ),
         durationMinutes: result.durationMinutes,
         deadline: result.deadline,
         recurring: result.recurring,
         recurrenceFrequency: result.recurrenceFrequency,
         difficulty: result.difficulty,
         habitId: result.habitId,
+        recurringSeriesId: recurringSeriesId,
       );
       await LocalDb.updateTask(updatedTask);
       if (!mounted) return;
-      setState(() => _tasks[i] = updatedTask);
+      final savedIndex = _tasks.indexWhere((t) => t.id == task.id);
+      if (savedIndex == -1) return;
+      // If it expired while the database write was in flight, restore the
+      // current in-memory state and run expiry processing instead of reviving it.
+      if (!_isTaskInteractable(_tasks[savedIndex], DateTime.now())) {
+        await LocalDb.updateTask(_tasks[savedIndex]);
+        unawaited(_flagNewlyMissedTasks());
+        return;
+      }
+      setState(() => _tasks[savedIndex] = updatedTask);
     } catch (error) {
       _reportDatabaseError('Could not update the task', error);
     }
   }
 
+  // A recurring task becomes available at its scheduled deadline and stays
+  // available until the next recurrence starts.
+  DateTime _nextRecurringDeadline(Task task, DateTime deadline) {
+    final frequency = task.recurrenceFrequency;
+    if (frequency == null) {
+      throw StateError('Recurring task has no recurrence frequency.');
+    }
+    final next = Recurrence.nextAfterCompletion(
+      deadline: deadline,
+      frequency: frequency,
+      completedAt: deadline.add(const Duration(microseconds: 1)),
+    );
+    if (!next.isAfter(deadline)) {
+      throw StateError('Recurrence did not advance beyond its deadline.');
+    }
+    return next;
+  }
+
+  // If the app was closed for several recurrence periods, use the latest
+  // scheduled occurrence at or before now as the new active occurrence.
+  DateTime _latestRecurringDeadlineAtOrBefore(Task task, DateTime now) {
+    var latest = task.deadline!;
+    var next = _nextRecurringDeadline(task, latest);
+    var guard = 0;
+    while (!now.isBefore(next) && guard < 500) {
+      latest = next;
+      next = _nextRecurringDeadline(task, latest);
+      guard++;
+    }
+    return latest;
+  }
+
+  bool _isTaskInteractable(Task task, DateTime now) {
+    if (task.status != 'active') return false;
+    final deadline = task.deadline;
+    if (deadline == null) return true;
+
+    if (task.isRecurring) {
+      if (now.isBefore(deadline)) return false;
+      // A malformed recurring task without a frequency cannot be advanced;
+      // allow its first occurrence after the scheduled instant rather than
+      // making it permanently inaccessible.
+      if (task.recurrenceFrequency == null) return true;
+      final nextDeadline = _nextRecurringDeadline(task, deadline);
+      return now.isBefore(nextDeadline);
+    }
+
+    // One-off tasks become failed as soon as their deadline has passed.
+    return !now.isAfter(deadline);
+  }
+
+  bool _canOpenTask(Task task, DateTime now) {
+    if (task.status == 'missed') return false;
+    if (task.status == 'completed' || task.status == 'cancelled') {
+      return true; // Historical details remain readable.
+    }
+    return _isTaskInteractable(task, now);
+  }
+
+  int _recurringStreakBefore(Task task) {
+    final seriesId = task.recurringSeriesId;
+    if (!task.isRecurring || task.deadline == null || seriesId == null) {
+      return 0;
+    }
+
+    final previousOccurrences = _tasks.where((candidate) {
+      return candidate.id != task.id &&
+          candidate.isRecurring &&
+          candidate.recurringSeriesId == seriesId &&
+          candidate.deadline != null &&
+          candidate.deadline!.isBefore(task.deadline!);
+    }).toList()..sort((a, b) => b.deadline!.compareTo(a.deadline!));
+
+    // Count only the consecutive successful occurrences since the latest
+    // non-completed occurrence. A missed recurring task therefore resets the
+    // streak, while older completed tasks remain in the history.
+    var streak = 0;
+    for (final previous in previousOccurrences) {
+      if (previous.status != 'completed') break;
+      streak++;
+    }
+    return streak;
+  }
+
+  Task _newRecurringOccurrence(Task source, DateTime deadline) => Task(
+    description: source.description,
+    subtasks: source.subtasks.map((s) => s.copyWith(isDone: false)).toList(),
+    durationMinutes: source.durationMinutes,
+    deadline: deadline,
+    recurring: true,
+    recurrenceFrequency: source.recurrenceFrequency,
+    difficulty: source.difficulty,
+    habitId: source.habitId,
+    recurringSeriesId: source.recurringSeriesId,
+  );
+
   void _toggleSubtask(int taskIndex, int subtaskIndex) {
+    if (taskIndex < 0 || taskIndex >= _tasks.length) return;
     final task = _tasks[taskIndex];
+    if (!_isTaskInteractable(task, DateTime.now())) return;
+    if (subtaskIndex < 0 || subtaskIndex >= task.subtasks.length) return;
     final updatedSubtasks = List<Subtask>.from(task.subtasks);
     updatedSubtasks[subtaskIndex] = updatedSubtasks[subtaskIndex].copyWith(
       isDone: !updatedSubtasks[subtaskIndex].isDone,
@@ -281,41 +461,64 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   Future<void> _markTaskComplete(int index) async {
+    if (index < 0 || index >= _tasks.length) return;
     final task = _tasks[index];
     final now = DateTime.now();
+    if (!_isTaskInteractable(task, now)) {
+      // Update an expired occurrence to failed, and generate the next one if
+      // necessary. A missed task must never be awarded XP.
+      unawaited(_flagNewlyMissedTasks());
+      return;
+    }
+
     final progressBefore = _progress;
     final isLate =
-        task.status == 'missed' ||
-        (task.deadline != null && now.isAfter(task.deadline!));
+        !task.isRecurring &&
+        task.deadline != null &&
+        now.isAfter(task.deadline!);
     final completionsToday = XpCalculator.completionsOnDay(
       _tasks
-          .where((t) => t.status == 'completed' && t.completedAt != null)
+          .where(
+            (t) =>
+                !t.isRecurring &&
+                t.status == 'completed' &&
+                t.completedAt != null,
+          )
           .map((t) => t.completedAt!),
       now,
     );
+    final recurringCompletionCount = task.isRecurring
+        ? _recurringStreakBefore(task) + 1
+        : 0;
+    final milestoneBonus = task.isRecurring
+        ? XpCalculator.recurringMilestoneBonus(
+            difficulty: task.difficulty,
+            completionCount: recurringCompletionCount,
+          )
+        : 0;
     final xpEarned = XpCalculator.xpForCompletion(
       difficulty: task.difficulty,
       createdAt: task.createdAt,
       deadline: task.deadline,
       completedAt: now,
       completionsToday: completionsToday,
+      isRecurring: task.isRecurring,
+      recurringCompletionCount: recurringCompletionCount,
     );
-    // A recurring task is recorded as done and the next occurrence is created as a new task.
+
+    // A successfully completed recurring occurrence creates its next scheduled
+    // occurrence. Subtask checkmarks are reset only on that new occurrence.
     Task? nextOccurrence;
-    if (task.isRecurring && task.deadline != null) {
-      nextOccurrence = Task(
-        description: task.description,
-        subtasks: task.subtasks.map((s) => s.copyWith(isDone: false)).toList(),
-        durationMinutes: task.durationMinutes,
-        deadline: Recurrence.nextAfterCompletion(
+    if (task.isRecurring &&
+        task.deadline != null &&
+        task.recurrenceFrequency != null) {
+      nextOccurrence = _newRecurringOccurrence(
+        task,
+        Recurrence.nextAfterCompletion(
           deadline: task.deadline!,
           frequency: task.recurrenceFrequency!,
           completedAt: now,
         ),
-        recurring: true,
-        recurrenceFrequency: task.recurrenceFrequency,
-        difficulty: task.difficulty,
-        habitId: task.habitId,
       );
     }
     final completedTask = task.copyWith(
@@ -349,10 +552,14 @@ class _NewTasksState extends State<NewTasks> {
         ? ' (+$coinsGained ${coinsGained == 1 ? 'coin' : 'coins'})'
         : '';
     var message = isLate
-        ? 'Task completed — +$xpEarned XP$coinsText. Past the deadline, so no '
-              'early bonus, but nothing was taken away either.'
+        ? 'Task completed — +$xpEarned XP$coinsText.'
         : 'Task completed! +$xpEarned XP$coinsText';
-    if (XpCalculator.dailyMultiplier(completionsToday) < 1.0) {
+    if (task.isRecurring && milestoneBonus > 0) {
+      message +=
+          ' $recurringCompletionCount-completion milestone: +$milestoneBonus bonus XP!';
+    }
+    if (!task.isRecurring &&
+        XpCalculator.dailyMultiplier(completionsToday) < 1.0) {
       message += ' Reduced XP: that was task ${completionsToday + 1} today.';
     }
     if (nextOccurrence != null) {
@@ -361,15 +568,19 @@ class _NewTasksState extends State<NewTasks> {
     }
     final newRank = UserProgress.rankReached(progressBefore, progressAfter);
     if (newRank != null) message += ' Rank up: ${newRank.name}!';
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _requestComplete(int taskId) async {
     var index = _tasks.indexWhere((t) => t.id == taskId);
     if (index == -1) return;
-    final task = _tasks[index];
-    if (task.status != 'active' && task.status != 'missed') return;
+    var task = _tasks[index];
+    if (!_isTaskInteractable(task, DateTime.now())) {
+      unawaited(_flagNewlyMissedTasks());
+      return;
+    }
 
     final unchecked = task.subtasksTotalCount - task.subtasksCompletedCount;
     if (unchecked > 0) {
@@ -395,6 +606,11 @@ class _NewTasksState extends State<NewTasks> {
       if (confirmed != true || !mounted) return;
       index = _tasks.indexWhere((t) => t.id == taskId);
       if (index == -1) return;
+      task = _tasks[index];
+      if (!_isTaskInteractable(task, DateTime.now())) {
+        unawaited(_flagNewlyMissedTasks());
+        return;
+      }
     }
     await _markTaskComplete(index);
   }
@@ -407,6 +623,14 @@ class _NewTasksState extends State<NewTasks> {
   );
 
   void _openTaskDetails(int taskId) {
+    final initialIndex = _tasks.indexWhere((t) => t.id == taskId);
+    if (initialIndex == -1) return;
+    final initialTask = _tasks[initialIndex];
+    if (!_canOpenTask(initialTask, DateTime.now())) {
+      unawaited(_flagNewlyMissedTasks());
+      return;
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -417,8 +641,8 @@ class _NewTasksState extends State<NewTasks> {
             final index = _tasks.indexWhere((t) => t.id == taskId);
             if (index == -1) return const SizedBox.shrink();
             final task = _tasks[index];
-            final isOpen = task.status == 'active' || task.status == 'missed';
             final now = DateTime.now();
+            final isOpen = _isTaskInteractable(task, now);
 
             Widget line(String label, String value) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
@@ -509,7 +733,7 @@ class _NewTasksState extends State<NewTasks> {
                                 : null,
                           ),
                           value: subtask.isDone,
-                          // Only completed and cancelled tasks are locked; a missed task stays editable.
+                          // Missed tasks and not-yet-due recurring tasks are locked.
                           onChanged: isOpen
                               ? (_) {
                                   _toggleSubtask(index, subtaskIndex);
@@ -531,17 +755,13 @@ class _NewTasksState extends State<NewTasks> {
                         if (isOpen)
                           FilledButton.icon(
                             icon: const Icon(Icons.check_circle_outline),
-                            label: Text(
-                              task.status == 'missed'
-                                  ? 'Complete (late)'
-                                  : 'Complete',
-                            ),
+                            label: const Text('Complete'),
                             onPressed: () {
                               Navigator.pop(sheetContext);
                               _requestComplete(taskId);
                             },
                           ),
-                        if (task.status == 'active')
+                        if (isOpen)
                           OutlinedButton.icon(
                             icon: const Icon(Icons.edit),
                             label: const Text('Edit'),
@@ -566,7 +786,8 @@ class _NewTasksState extends State<NewTasks> {
                             },
                           ),
                         // Deleting a completed task would remove its XP, since XP is derived from the task list.
-                        if (task.status != 'completed')
+                        if ((task.status == 'active' && isOpen) ||
+                            task.status == 'cancelled')
                           TextButton.icon(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             label: const Text(
@@ -591,6 +812,13 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   Future<void> _deleteTask(int taskId) async {
+    final index = _tasks.indexWhere((task) => task.id == taskId);
+    if (index == -1) return;
+    final task = _tasks[index];
+    if (task.status != 'cancelled' &&
+        !_isTaskInteractable(task, DateTime.now())) {
+      return;
+    }
     try {
       await LocalDb.deleteTask(taskId);
       if (!mounted) return;
@@ -601,7 +829,9 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   Future<void> _cancelTask(int index) async {
+    if (index < 0 || index >= _tasks.length) return;
     final task = _tasks[index];
+    if (!_isTaskInteractable(task, DateTime.now())) return;
     final updatedTask = task.copyWith(status: 'cancelled');
     try {
       await LocalDb.updateTask(updatedTask);
@@ -617,41 +847,89 @@ class _NewTasksState extends State<NewTasks> {
     }
   }
 
-  void _flagNewlyMissedTasks() {
+  Future<void> _flagNewlyMissedTasks() async {
     // The timer can fire once more after dispose().
     if (!mounted) return;
 
     final now = DateTime.now();
-    final newlyMissed = <String>[];
-    final updatedTasks = <Task>[];
+    final newlyMissed = <Task>[];
+    final replacements = <Task>[];
 
+    // Replacing a failed recurring occurrence must not make
+    // the newly inserted occurrence eligible for processing in this same pass.
+    for (final task in List<Task>.of(_tasks)) {
+      if (task.status != 'active' || task.deadline == null) continue;
+
+      var shouldMiss = false;
+      if (task.isRecurring) {
+        if (task.recurrenceFrequency == null) continue;
+        final followingDeadline = _nextRecurringDeadline(task, task.deadline!);
+        // A recurring occurrence is usable from its own deadline until the
+        // next scheduled occurrence begins. At that instant the old one fails.
+        if (!now.isBefore(followingDeadline)) {
+          shouldMiss = true;
+          final currentScheduledDeadline = _latestRecurringDeadlineAtOrBefore(
+            task,
+            now,
+          );
+          replacements.add(
+            _newRecurringOccurrence(task, currentScheduledDeadline),
+          );
+        }
+      } else if (now.isAfter(task.deadline!)) {
+        shouldMiss = true;
+      }
+
+      if (shouldMiss) newlyMissed.add(task.copyWith(status: 'missed'));
+    }
+
+    if (newlyMissed.isEmpty || !mounted) return;
+
+    // Mark them failed in memory before any async writes so a second timer tick
+    // cannot create duplicate replacement occurrences.
     setState(() {
-      for (var i = 0; i < _tasks.length; i++) {
-        final task = _tasks[i];
-        final isPastDue = task.deadline != null && task.deadline!.isBefore(now);
-        if (task.status == 'active' && isPastDue) {
-          final updatedTask = task.copyWith(status: 'missed');
-          _tasks[i] = updatedTask;
-          updatedTasks.add(updatedTask);
-          newlyMissed.add(task.description);
+      for (final missedTask in newlyMissed) {
+        final index = _tasks.indexWhere((task) => task.id == missedTask.id);
+        if (index != -1 && _tasks[index].status == 'active') {
+          _tasks[index] = missedTask;
         }
       }
     });
 
-    for (final task in updatedTasks) {
-      _saveTaskSilently(task);
+    for (final missedTask in newlyMissed) {
+      try {
+        await LocalDb.updateTask(missedTask);
+      } catch (error) {
+        _reportDatabaseError('Could not save missed task', error);
+      }
     }
-    if (newlyMissed.isEmpty || !mounted) return;
+
+    for (final replacement in replacements) {
+      try {
+        final id = await LocalDb.addTask(replacement);
+        if (!mounted) return;
+        setState(() => _tasks.add(replacement.copyWith(id: id)));
+      } catch (error) {
+        _reportDatabaseError('Could not create the next recurring task', error);
+      }
+    }
+
+    if (!mounted) return;
     final label = newlyMissed.length == 1
-        ? '"${newlyMissed.first}" missed its deadline'
-        : '${newlyMissed.length} tasks missed their deadline';
+        ? '"${newlyMissed.first.description}" was marked as failed'
+        : '${newlyMissed.length} tasks were marked as failed';
+    final recurringReplacementCount = replacements.length;
+    final replacementMessage = recurringReplacementCount > 0
+        ? ' $recurringReplacementCount new recurring '
+              '${recurringReplacementCount == 1 ? 'occurrence is' : 'occurrences are'} available.'
+        : '';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label — no XP lost. Finish it anytime.')),
+      SnackBar(content: Text('$label. No XP awarded.$replacementMessage')),
     );
   }
 
   void _openCalendar() {
-   Navigator.of(context).push(
+    Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
           appBar: const UserStatsAppBar(title: 'Calendar'),
@@ -664,19 +942,6 @@ class _NewTasksState extends State<NewTasks> {
         ),
       ),
     );
-    // Navigator.of(context).push(
-    //   MaterialPageRoute<void>(
-    //     builder: (_) => Scaffold(
-    //       appBar: const UserStatsAppBar(title: 'Calendar'),
-    //       body: SafeArea(
-    //         child: TaskCalendar(
-    //           tasks: List<Task>.of(_tasks),
-    //           habits: List<Habit>.of(_habits),
-    //         ),
-    //       ),
-    //     ),
-    //   ),
-    // );
   }
 
   @override
@@ -696,8 +961,16 @@ class _NewTasksState extends State<NewTasks> {
     Widget cardFor(Task task) => TaskCard(
       task: task,
       now: now,
-      onToggleComplete: () => _requestComplete(task.id!),
-      onOpen: () => _openTaskDetails(task.id!),
+      onToggleComplete: () {
+        if (_isTaskInteractable(task, DateTime.now())) {
+          _requestComplete(task.id!);
+        }
+      },
+      onOpen: () {
+        if (_canOpenTask(task, DateTime.now())) {
+          _openTaskDetails(task.id!);
+        }
+      },
     );
 
     Widget heading(String text, {String? trailing, Widget? action}) => Padding(
@@ -717,7 +990,6 @@ class _NewTasksState extends State<NewTasks> {
       ),
     );
 
-    // Temporary entry point until the calendar is its own tab.
     final calendarButton = IconButton(
       icon: const Icon(Icons.calendar_month),
       tooltip: 'Calendar',

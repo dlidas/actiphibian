@@ -35,6 +35,9 @@ class Task {
   final int xpAwarded;
   final DateTime? completedAt;
   final int? habitId;
+
+  /// Stable identifier shared by every occurrence in the same recurring series.
+  final String? recurringSeriesId;
   final String? remoteId;
   final bool isSynced;
   final DateTime createdAt;
@@ -54,6 +57,7 @@ class Task {
     this.xpAwarded = 0,
     this.completedAt,
     this.habitId,
+    this.recurringSeriesId,
     this.remoteId,
     this.isSynced = false,
     DateTime? createdAt,
@@ -67,16 +71,17 @@ class Task {
     int? id,
     String? description,
     List<Subtask>? subtasks,
-    Object? durationMinutes = _unset, // int?
-    Object? deadline = _unset, // DateTime?
+    Object? durationMinutes = _unset,
+    Object? deadline = _unset, 
     bool? recurring,
-    Object? recurrenceFrequency = _unset, // String?
+    Object? recurrenceFrequency = _unset, 
     String? difficulty,
     String? perceivedDifficulty,
     String? status,
     int? xpAwarded,
     DateTime? completedAt,
-    Object? habitId = _unset, // int?
+    Object? habitId = _unset,
+    Object? recurringSeriesId = _unset, 
     String? remoteId,
     bool? isSynced,
     DateTime? updatedAt,
@@ -101,6 +106,9 @@ class Task {
       xpAwarded: xpAwarded ?? this.xpAwarded,
       completedAt: completedAt ?? this.completedAt,
       habitId: identical(habitId, _unset) ? this.habitId : habitId as int?,
+      recurringSeriesId: identical(recurringSeriesId, _unset)
+          ? this.recurringSeriesId
+          : recurringSeriesId as String?,
       remoteId: remoteId ?? this.remoteId,
       isSynced: isSynced ?? this.isSynced,
       createdAt: createdAt,
@@ -123,6 +131,7 @@ class Task {
       'xpAwarded': xpAwarded,
       'completedAt': completedAt?.toIso8601String(),
       'habitId': habitId,
+      'recurringSeriesId': recurringSeriesId,
       'remoteId': remoteId,
       'isSynced': isSynced ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
@@ -153,6 +162,7 @@ class Task {
           ? DateTime.parse(map['completedAt'] as String)
           : null,
       habitId: map['habitId'] as int?,
+      recurringSeriesId: map['recurringSeriesId'] as String?,
       remoteId: map['remoteId']?.toString(),
       isSynced: (map['isSynced'] as int? ?? 0) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),

@@ -3,11 +3,12 @@ import 'package:actiphibian/models/focus_session.dart';
 /// To stop user from spamming focus to just earn xp for coins, focus session have cap limit on how much xp they can earn.
 /// There's a minimum focus time they must have for them to even earn xp.
 /// Only credit the first 2hrs of the focus session.
-/// Thats roughly a one hard task and medium task base xp {without any special modifier like streaks}
 
 class FocusXp {
-  static const int minutesPerXp = 3;
-  static const int minSessionMinutes = 5;
+  static const int xpMultiplier = 3;
+  static const int minutesDivisor = 2;
+
+  static const int minSessionMinutes = 60;
   static const int dailyCapMinutes = 120;
 
   static int focusMinutesOnDay(Iterable<FocusSession> sessions, DateTime day) {
@@ -29,6 +30,7 @@ class FocusXp {
     final remaining = dailyCapMinutes - focusMinutesToday;
     if (remaining <= 0) return 0;
     final credited = focusedMinutes < remaining ? focusedMinutes : remaining;
-    return credited ~/ minutesPerXp;
+
+    return (credited * xpMultiplier) ~/ minutesDivisor;
   }
 }

@@ -1,5 +1,6 @@
 class Rank {
   final String name;
+
   /// Total XP a user needs to hold this rank.
   final int minXp;
 
@@ -8,13 +9,13 @@ class Rank {
 
 class RankTable {
   static const List<Rank> ranks = [
-    Rank('Tadpole', 0),
-    Rank('Froglet', 150),
-    Rank('Tree Frog', 500),
-    Rank('Bullfrog', 1200),
-    Rank('Golden Frog', 2500),
-    Rank('Diamond Frog', 5000),
-    Rank('Axolotl', 10000),
+    Rank('Egg', 0),
+    Rank('Polliwog ', 200),
+    Rank('Tadpole ', 800),
+    Rank('Froglet ', 1500),
+    Rank('Pond Frog', 3500),
+    Rank('Bullfrog', 7000),
+    Rank('Axolotl', 12000),
   ];
 
   static int indexForXp(int totalXp) {
