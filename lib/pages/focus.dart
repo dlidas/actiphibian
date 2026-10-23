@@ -354,17 +354,35 @@ class _FocusPageState extends State<FocusPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Chip(
-                avatar: Icon(
-                  Icons.bolt,
-                  color: Theme.of(context).colorScheme.tertiary,
-                  size: 18,
-                ),
-                label: Text(
-                  '${user.xp} XP earned',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                backgroundColor: Theme.of(context).colorScheme.secondary,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  Chip(
+                    avatar: Icon(
+                      Icons.bolt,
+                      color: Theme.of(context).colorScheme.tertiary,
+                      size: 18,
+                    ),
+                    label: Text(
+                      '${user.xp} XP earned',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                  ),
+                  Chip(
+                    avatar: Icon(
+                      Icons.monetization_on,
+                      color: Theme.of(context).colorScheme.tertiary,
+                      size: 18,
+                    ),
+                    label: Text(
+                      '${user.balance} coins',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Text(
