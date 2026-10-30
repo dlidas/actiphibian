@@ -306,5 +306,14 @@ class LocalDb {
     );
     return (rows.first['total'] as int?) ?? 0;
   }
+
+  static Future<int> getStreak() async {
+    final db = await database;
+    final rows = await db.query(
+      'habits',
+      columns: ['currentStreak'],
+    );
+    return (rows.first['currentStreak'] as int?) ?? 0;
+  }
   
 }

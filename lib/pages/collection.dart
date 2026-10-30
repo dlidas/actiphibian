@@ -3,6 +3,7 @@ import 'package:actiphibian/data/user_manager.dart';
 import 'package:actiphibian/models/amphibian.dart';
 import 'package:actiphibian/models/user.dart';
 import 'package:actiphibian/services/gacha.dart';
+import 'package:actiphibian/services/sound_player.dart';
 import 'package:actiphibian/widgets/pond_message_state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -94,6 +95,7 @@ class _CollectionPageState extends State<CollectionPage> {
                     padding: const EdgeInsets.only(top: 20),
                     child: (currency >= 50) ? ElevatedButton(//Roll button
                       onPressed: () async {
+                        SoundPlayer.playSound('audio/congratulations.mp3');
                         setDialogueState(() => _rollError = null);
                         try {
                           //roll for random Amphibian
