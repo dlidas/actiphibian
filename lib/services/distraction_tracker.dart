@@ -14,6 +14,8 @@ class DistractionTrackerService with WidgetsBindingObserver {
 
   void initialize() {
     _tracking = true;
+    // Observers are kept in a list, so remove first to never register twice
+    WidgetsBinding.instance.removeObserver(this);
     WidgetsBinding.instance.addObserver(this);
   }
 

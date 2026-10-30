@@ -67,6 +67,9 @@ class FocusSessionController extends ChangeNotifier {
   }
 
   void toggle(UserManager userManager) {
+    // Wait until the finished session is saved and its reward is claimed
+    if (_isCompleting || _pendingReward != null) return;
+
     if (_isRunning) {
       _timer?.cancel();
       _tracker.dispose();
@@ -91,6 +94,7 @@ class FocusSessionController extends ChangeNotifier {
     _isRunning = true;
     notifyListeners();
 
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
         _secondsRemaining--;
