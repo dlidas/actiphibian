@@ -50,13 +50,13 @@ class _FocusPageState extends State<FocusPage> {
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'Set Focus Timer',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -163,9 +163,11 @@ class _FocusPageState extends State<FocusPage> {
 
                         Navigator.pop(context);
                       },
-                      child: const Text(
+                      child: Text(
                         'OK',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -288,9 +290,11 @@ class _FocusPageState extends State<FocusPage> {
 
                 _session.claimReward();
               },
-              child: const Text(
+              child: Text(
                 'Claim Rewards',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
               ),
             ),
           ],
