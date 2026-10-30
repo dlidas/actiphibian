@@ -928,6 +928,25 @@ class _NewTasksState extends State<NewTasks> {
     );
   }
 
+  // Tells the user why a task card did not open, instead of doing nothing.
+  void _explainLockedTask(Task task) {
+    final now = DateTime.now();
+    final deadline = task.deadline;
+    String? message;
+    if (task.status == 'missed') {
+      message = 'This task was missed, so it can no longer be changed.';
+    } else if (task.isRecurring && deadline != null && now.isBefore(deadline)) {
+      message =
+          'This repeating task opens on ${TaskLabels.deadlineLabel(deadline)}.';
+    }
+    // An expired one-off task is marked as failed, which shows its own message.
+    unawaited(_flagNewlyMissedTasks());
+    if (message == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _openCalendar() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -961,14 +980,19 @@ class _NewTasksState extends State<NewTasks> {
     Widget cardFor(Task task) => TaskCard(
       task: task,
       now: now,
+      isLocked: task.status == 'active' && !_isTaskInteractable(task, now),
       onToggleComplete: () {
         if (_isTaskInteractable(task, DateTime.now())) {
           _requestComplete(task.id!);
+        } else {
+          _explainLockedTask(task);
         }
       },
       onOpen: () {
         if (_canOpenTask(task, DateTime.now())) {
           _openTaskDetails(task.id!);
+        } else {
+          _explainLockedTask(task);
         }
       },
     );
