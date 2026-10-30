@@ -95,16 +95,30 @@ class _CollectionPageState extends State<CollectionPage> {
                     padding: const EdgeInsets.only(top: 20),
                     child: (currency >= 50) ? ElevatedButton(//Roll button
                       onPressed: () async {
-                        SoundPlayer.playSound('audio/congratulations.mp3');
                         setDialogueState(() => _rollError = null);
+                        setDialogueState(() => currency = Provider.of<UserManager>(context, listen: false).user.balance);
                         try {
-                          //roll for random Amphibian
-                          final amphibianRolled = await GachaRoller.roll();
-                          await LocalDb.addAmphibian(amphibianRolled);
-                          if (mounted) setState(() => _refreshCounter++);
+                          if (currency >= 50) {
+                            //roll for random Amphibian
+                            final amphibianRolled = await GachaRoller.roll();
+                            await LocalDb.addAmphibian(amphibianRolled);
+                            SoundPlayer.playSound('audio/congratulations.mp3');                        
+                            if (mounted) setState(() => _refreshCounter++);
+
+                            //Update currency
+                            User user = Provider.of<UserManager>(context, listen: false).user;
+                            user.balance -= 50;
+                            LocalDb.updateUser(user);
+                            context.read<UserManager>().updateUser(user);
+
+                            //Refresh
+                            if (!context.mounted) return;
+                            setDialogueState(() => amphibian = amphibianRolled);
+                          }
+
                           //Refresh
                           if (!context.mounted) return;
-                          setDialogueState(() => amphibian = amphibianRolled);
+                          
                         } catch (error, stackTrace) {
                           debugPrint('Could not roll for an amphibian: $error');
                           debugPrintStack(stackTrace: stackTrace);
@@ -114,12 +128,7 @@ class _CollectionPageState extends State<CollectionPage> {
                                   'Could not add a pond friend. Try again.';
                             });
                           }
-                        }
-                        //Update currency
-                        User user = Provider.of<UserManager>(context, listen: false).user;
-                        user.balance -= 50;
-                        LocalDb.updateUser(user);
-                        context.read<UserManager>().updateUser(user);
+                        }                        
                       },
                       child: (amphibian == null) ? const Text('Roll for a new amphibian (\$50)'):
                         const Text('Roll again! (\$50)'),
@@ -290,10 +299,103 @@ class AmphibianIcon extends StatefulWidget {
 }
 
 class _AmphibianIconState extends State<AmphibianIcon> {
+  bool _isInfoVisible = false;
+  int _refreshCounter = 0;
+  //Map Rarities to colors for UI
+  final Map<Rarity, Color> rarityColorMap = {
+    Rarity.common: Colors.grey,
+    Rarity.uncommon: Colors.lightGreen,
+    Rarity.rare: Colors.lightBlue,
+    Rarity.legendary: Colors.yellow
+  };
+
+  //Show Amphibian info window
+  Future<void> _showInfo() async {
+    setState(() {
+      _isInfoVisible = true;
+      _refreshCounter++;
+    });
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogueState) {
+            return Dialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondary,
+                      shape: BoxShape.circle,
+                    ),
+                    margin: const EdgeInsets.all(15),
+                    child: Padding(
+                          padding: EdgeInsetsGeometry.all(20),
+                          child: Image.asset(
+                              'assets/images/${widget.amphibian.filePath}',
+                              width: 64,
+                              height: 64,
+                              fit: BoxFit.contain,
+                            ),
+                        ),                    
+                  ),
+                  Column(
+                      children: [                        
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: Column(//Amphibian info
+                              children: [                                
+                                Container(//Rarity
+                                  decoration: BoxDecoration(
+                                    color: rarityColorMap[widget.amphibian.rarity],
+                                  ),
+                                  padding: EdgeInsets.all(5),
+                                  child: Text(widget.amphibian.rarity.name.toUpperCase()),
+                                ),
+                                Text(//Amphibian name
+                                  widget.amphibian.name,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                  ),
+                                ),
+                                Scrollable(
+                                  viewportBuilder: (context, position) => Padding(
+                                    padding: EdgeInsetsGeometry.all(15),
+                                    child: Text(
+                                      widget.amphibian.description,
+                                      textAlign: TextAlign.justify,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ),
+                      ],
+                    ),                  
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    }, 
+                    child: const Text('Back')
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (mounted) setState(() => _isInfoVisible = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      onPressed: null,
+      onPressed: _showInfo,
       icon: Image.asset('assets/images/${widget.amphibian.filePath}'),
     );
   }

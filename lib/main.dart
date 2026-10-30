@@ -13,6 +13,9 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
+  //FOR DEBUGGING: RESETS DATABASE - BE CAREFUL
+  // LocalDb.removeDatabase(); //!
+
   if (await LocalDb.getUser(1) != null) {
     if ((await LocalDb.getUser(1) as User).id != null) {
       isNewUser = false;
@@ -117,7 +120,7 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     currentPageIndex = widget.pageIndex.clamp(0, _pageTitles.length - 1);
     super.initState();
-    _loadUser();
+    _loadUser();    
   }
 
   Future<void> _loadUser() async {
@@ -142,6 +145,11 @@ class _MainPageState extends State<MainPage> {
 
     //Update shared user to include id
     context.read<UserManager>().updateUser(userWithId);
+
+    //Debug -- TODO: REMOVE BEFORE SUBMISSION
+    // userWithId.balance = 1000;
+    // LocalDb.updateUser(userWithId);
+    // context.read<UserManager>().updateUser(userWithId);
   }
 
   @override
