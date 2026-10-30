@@ -1,5 +1,6 @@
 import 'package:actiphibian/data/user_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/focus_session_controller.dart';
 
@@ -25,10 +26,13 @@ class _FocusPageState extends State<FocusPage> {
       text: _session.seconds.toString().padLeft(2, '0'),
     );
 
+    String? timeError;
+
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.secondary,
           shape: RoundedRectangleBorder(
@@ -77,6 +81,10 @@ class _FocusPageState extends State<FocusPage> {
                         child: TextField(
                           controller: minController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(3),
+                          ],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 28,
@@ -99,6 +107,10 @@ class _FocusPageState extends State<FocusPage> {
                         child: TextField(
                           controller: secController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(2),
+                          ],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 28,
@@ -112,6 +124,14 @@ class _FocusPageState extends State<FocusPage> {
                     ],
                   ),
                 ),
+                if (timeError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    timeError!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Action Buttons: Cancel & OK
@@ -134,6 +154,11 @@ class _FocusPageState extends State<FocusPage> {
                         int parsedMins = int.tryParse(minController.text) ?? 0;
                         int parsedSecs = int.tryParse(secController.text) ?? 0;
 
+                        final error = _focusTimeError(parsedMins, parsedSecs);
+                        if (error != null) {
+                          setDialogState(() => timeError = error);
+                          return;
+                        }
                         _session.setDuration(parsedMins, parsedSecs);
 
                         Navigator.pop(context);
@@ -149,8 +174,22 @@ class _FocusPageState extends State<FocusPage> {
             ),
           ),
         );
-      },
+        },
+      ),
     );
+  }
+
+  static const int _maxFocusMinutes = 180;
+
+  //Returns a message when the entered time cannot be used
+  String? _focusTimeError(int minutes, int seconds) {
+    if (seconds > 59) return 'Seconds must be between 0 and 59.';
+    if (minutes == 0 && seconds == 0) return 'Set a time longer than zero.';
+    if (minutes > _maxFocusMinutes ||
+        (minutes == _maxFocusMinutes && seconds > 0)) {
+      return 'A session can be at most $_maxFocusMinutes minutes.';
+    }
+    return null;
   }
 
   void _toggleTimer() {
