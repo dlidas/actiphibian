@@ -74,7 +74,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         return [tasksCreated.toDouble()];
       case "Tasks Completed":
         return [tasksCompleted.toDouble()];
-      case "Tasks Incompleted":
+      case "Tasks Not Completed":
         return [tasksIncompleted.toDouble()];
       case "Total Amphibians":
         return [amphibianCount.toDouble()];
@@ -123,8 +123,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     child: Text("Tasks Completed"),
                   ),
                   DropdownMenuItem(
-                    value: "Tasks Incompleted",
-                    child: Text("Tasks Incompleted"),
+                    value: "Tasks Not Completed",
+                    child: Text("Tasks Not Completed"),
                   ),
                   DropdownMenuItem(
                     value: "Total Amphibians",
