@@ -80,10 +80,12 @@ class FocusSessionController extends ChangeNotifier {
     }
     if (_sessionStartedAt == null) {
       _focusedSeconds = 0;
+      // Keep the count across pause and resume within one session
+      _tracker.reset();
+      _distractions = 0;
     }
     _sessionStartedAt ??= DateTime.now();
 
-    _tracker.reset();
     _tracker.initialize();
 
     _isRunning = true;
@@ -177,6 +179,7 @@ class FocusSessionController extends ChangeNotifier {
   void endSession() {
     _timer?.cancel();
     _tracker.dispose();
+    _tracker.reset();
     _sessionStartedAt = null;
     _focusedSeconds = 0;
     _secondsRemaining = (_minutes * 60) + _seconds;
@@ -188,6 +191,7 @@ class FocusSessionController extends ChangeNotifier {
   //Called when the user closes the reward dialog
   void claimReward() {
     _pendingReward = null;
+    _tracker.reset();
     _secondsRemaining = (_minutes * 60) + _seconds;
     _isRunning = false;
     _distractions = 0;

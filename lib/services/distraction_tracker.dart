@@ -34,8 +34,10 @@ class DistractionTrackerService with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_tracking) return;
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    // Count only when the app goes to the background. "inactive" also fires
+    // for the notification panel and fires before "paused", which counted
+    // one visit twice.
+    if (state == AppLifecycleState.paused) {
       _distractions++;
       onDistractionDetected();
     }

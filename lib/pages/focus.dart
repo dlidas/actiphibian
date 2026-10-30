@@ -271,7 +271,7 @@ class _FocusPageState extends State<FocusPage> {
               if (distractions > 0) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Distractions logged: $distractions',
+                  'Times you left the app: $distractions',
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ],
@@ -349,8 +349,9 @@ class _FocusPageState extends State<FocusPage> {
               ),
               const SizedBox(height: 20),
               Chip(
+                avatar: const Icon(Icons.phone_iphone, size: 18),
                 label: Text(
-                  'Auto Distractions: ${session.distractions}',
+                  'Times you left the app: ${session.distractions}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
