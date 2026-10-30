@@ -173,6 +173,18 @@ class FocusSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  //Stops the session early without saving it or awarding XP
+  void endSession() {
+    _timer?.cancel();
+    _tracker.dispose();
+    _sessionStartedAt = null;
+    _focusedSeconds = 0;
+    _secondsRemaining = (_minutes * 60) + _seconds;
+    _isRunning = false;
+    _distractions = 0;
+    notifyListeners();
+  }
+
   //Called when the user closes the reward dialog
   void claimReward() {
     _pendingReward = null;

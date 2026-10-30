@@ -157,6 +157,29 @@ class _FocusPageState extends State<FocusPage> {
     _session.toggle(context.read<UserManager>());
   }
 
+  Future<void> _confirmEndSession() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('End this session?'),
+        content: const Text(
+          'The timer will reset and you will not earn XP or coins for this session.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep going'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('End session'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) _session.endSession();
+  }
+
   //Show the reward dialog once, when this page is visible
   void _showPendingReward(FocusReward? reward) {
     if (reward == null || _showingRewardDialog) return;
@@ -337,6 +360,13 @@ class _FocusPageState extends State<FocusPage> {
                     onPressed: _toggleTimer,
                     child: Text(session.isRunning ? 'Pause' : 'Start'),
                   ),
+                  if (session.hasActiveSession) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: _confirmEndSession,
+                      child: const Text('End'),
+                    ),
+                  ],
                 ],
               ),
             ],
