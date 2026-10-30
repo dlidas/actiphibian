@@ -1,8 +1,8 @@
 import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/user_manager.dart';
 import 'package:actiphibian/models/amphibian.dart';
-import 'package:actiphibian/models/user.dart';
 import 'package:actiphibian/services/gacha.dart';
+import 'package:actiphibian/services/gacha_economy.dart';
 import 'package:actiphibian/services/sound_player.dart';
 import 'package:actiphibian/widgets/pond_message_state.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +20,6 @@ class _CollectionPageState extends State<CollectionPage> {
   int _refreshCounter = 0;
   Amphibian? amphibian;
   String? _rollError;
-  late int currency;
   //Map Rarities to colors for UI
   final Map<Rarity, Color> rarityColorMap = {
     Rarity.common: Colors.grey,
@@ -35,7 +34,6 @@ class _CollectionPageState extends State<CollectionPage> {
       _isGachaVisible = true;
       _refreshCounter++;
       _rollError = null;
-      currency = Provider.of<UserManager>(context, listen: false).user.balance;
     });
 
     await showDialog(
@@ -43,6 +41,7 @@ class _CollectionPageState extends State<CollectionPage> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setDialogueState) {
+            final currency = context.watch<UserManager>().user.balance;
             return Dialog(
               backgroundColor: Theme.of(context).colorScheme.surface,
               child: Column(
@@ -101,9 +100,12 @@ class _CollectionPageState extends State<CollectionPage> {
                           //roll for random Amphibian
                           final amphibianRolled = await GachaRoller.roll();
                           await LocalDb.addAmphibian(amphibianRolled);
-                          if (mounted) setState(() => _refreshCounter++);
-                          //Refresh
                           if (!context.mounted) return;
+                          final userManager = context.read<UserManager>();
+                          if (userManager.spendCoins(GachaEconomy.singlePullCost)) {
+                            await LocalDb.updateUser(userManager.user);
+                          }
+                          if (mounted) setState(() => _refreshCounter++);
                           setDialogueState(() => amphibian = amphibianRolled);
                         } catch (error, stackTrace) {
                           debugPrint('Could not roll for an amphibian: $error');
@@ -115,11 +117,6 @@ class _CollectionPageState extends State<CollectionPage> {
                             });
                           }
                         }
-                        //Update currency
-                        User user = Provider.of<UserManager>(context, listen: false).user;
-                        user.balance -= 50;
-                        LocalDb.updateUser(user);
-                        context.read<UserManager>().updateUser(user);
                       },
                       child: (amphibian == null) ? const Text('Roll for a new amphibian (50 coins)'):
                         const Text('Roll again! (50 coins)'),

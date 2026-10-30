@@ -70,6 +70,23 @@ class UserStatsAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         ),
+        Tooltip(
+          message: 'Streak: ${user.streak} days',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.local_fire_department),
+                const SizedBox(width: 4),
+                Text(
+                  '${user.streak}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ),
         ...actions,
       ],
     );

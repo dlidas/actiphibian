@@ -151,15 +151,12 @@ class _NewTasksState extends State<NewTasks> {
     return 'None';
   }
 
-  // Coins earned are derived from total XP, so only spendable coins needs storing and not the total cummulative coins user has earned.
-  final int _coinsSpent = 0;
-
   void _syncProgressToUserManager() {
     final progress = _progress;
     context.read<UserManager>().updateProgress(
       level: progress.level,
       xp: progress.totalXp,
-      balance: progress.coins,
+      streak: progress.streak,
     );
   }
 
@@ -640,7 +637,7 @@ class _NewTasksState extends State<NewTasks> {
   UserProgress get _progress => UserProgress.fromTasks(
     _tasks,
     now: DateTime.now(),
-    coinsSpent: _coinsSpent,
+    coinsSpent: context.read<UserManager>().user.coinsSpent,
     focusSessions: _focusSessions,
   );
 

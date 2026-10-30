@@ -138,12 +138,14 @@ class _MainPageState extends State<MainPage> {
     final progress = UserProgress.fromTasks(
       tasks,
       now: DateTime.now(),
+      coinsSpent: userWithId.coinsSpent,
       focusSessions: focusSessions,
     );
     userWithId
       ..level = progress.level
       ..xp = progress.totalXp
-      ..balance = progress.coins;
+      ..balance = progress.coins
+      ..streak = progress.streak;
 
     if (!mounted) return;
 

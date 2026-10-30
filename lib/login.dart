@@ -130,6 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                         return Theme.of(context).colorScheme.primary;
                       }),
                     ),
+                    onPressed: _canSubmit ? _getStarted : null,
                     child: Text(
                       'Get Started',
                       style: TextStyle(
@@ -137,7 +138,6 @@ class _LoginPageState extends State<LoginPage> {
                         fontSize: 20,
                       ),
                     ),
-                    onPressed: _canSubmit ? _getStarted : null,
                   )
                 ),
               ),

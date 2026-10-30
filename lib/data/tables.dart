@@ -7,6 +7,7 @@ class Tables {
       'level INTEGER, '
       'xp INTEGER, '
       'balance INTEGER'
+      'consSpent INTEGER NOT NULL DEFAULT 0'
       ');';
 
   // Habits are stored independently so tasks can refer to a habit by ID.
