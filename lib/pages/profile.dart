@@ -3,7 +3,6 @@ import 'package:actiphibian/main.dart';
 import 'package:actiphibian/widgets/pond_action_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:actiphibian/data/repo.dart';
 import 'statistics.dart';
 import 'socials.dart';
 
@@ -61,21 +60,11 @@ class ProfilePage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
-                  child: FutureBuilder<int>(
-                    future: LocalDb.getStreak(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return const Text('ERROR - Could Not Load Current Streak');
-                      }
-                      final currentStreak = snapshot.data ?? 0;
-                      return Text(
-                        'Current Streak: $currentStreak',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: colors.onSecondary,
-                        ),
-                      );
-                    },
+                  child: Center(
+                    child: Text(
+                      'Current Streak: ${context.watch<UserManager>().user.streak}',
+                      style: TextStyle(fontSize: 18, color: colors.onSecondary)
+                      ),
                   ),
                 ),
               ),

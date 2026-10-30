@@ -142,6 +142,7 @@ class FocusSessionController extends ChangeNotifier {
       final progress = UserProgress.fromTasks(
         tasks,
         now: DateTime.now(),
+        coinsSpent: userManager.user.coinsSpent,
         focusSessions: [...sessions, session],
       );
 
@@ -149,7 +150,7 @@ class FocusSessionController extends ChangeNotifier {
       userManager.updateProgress(
         level: progress.level,
         xp: progress.totalXp,
-        balance: progress.coins,
+        streak: progress.streak,
       );
 
       final earnedCoins = progress.coins - previousBalance;
