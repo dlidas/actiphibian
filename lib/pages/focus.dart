@@ -218,7 +218,10 @@ class _FocusPageState extends State<FocusPage> {
         ],
       ),
     );
-    if (confirmed == true && mounted) _session.endSession();
+    // The timer may have finished while this dialog was open
+    if (confirmed == true && mounted && _session.hasActiveSession) {
+      _session.endSession();
+    }
   }
 
   //Show the reward dialog once, when this page is visible
@@ -239,65 +242,69 @@ class _FocusPageState extends State<FocusPage> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Session Completed!',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D3B00),
+        // The back button must not close it, or the reward is never claimed
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Earned XP: +$xpEarned XP',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+            title: const Text(
+              'Session Completed!',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D3B00),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Earned Coins: +$coinsEarned Coins',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Earned XP: +$xpEarned XP',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              if (distractions > 0) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Times you left the app: $distractions',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  'Earned Coins: +$coinsEarned Coins',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                if (distractions > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Times you left the app: $distractions',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
               ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () {
+                  _showingRewardDialog = false;
+                  Navigator.of(dialogContext).pop();
+
+                  _session.claimReward();
+                },
+                child: Text(
+                  'Claim Rewards',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                ),
+              ),
             ],
           ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: () {
-                _showingRewardDialog = false;
-                Navigator.of(dialogContext).pop();
-
-                _session.claimReward();
-              },
-              child: Text(
-                'Claim Rewards',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
