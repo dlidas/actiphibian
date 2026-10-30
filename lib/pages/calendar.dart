@@ -71,7 +71,6 @@ class _CalendarPageState extends State<CalendarPage> {
                   ? PondMessageState(
                       icon: Icons.cloud_off_outlined,
                       message: 'Could not load tasks for the calendar.',
-                      details: _loadError,
                       action: ElevatedButton(
                         onPressed: _loadCalendarData,
                         child: const Text('Retry'),

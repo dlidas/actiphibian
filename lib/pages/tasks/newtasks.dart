@@ -128,11 +128,13 @@ class _NewTasksState extends State<NewTasks> {
     }
   }
 
+  // Logs the technical error and shows the user a plain message.
   void _reportDatabaseError(String message, Object error) {
+    debugPrint('$message: $error');
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('$message: $error')));
+    ).showSnackBar(SnackBar(content: Text('$message. Please try again.')));
   }
 
   void _saveTaskSilently(Task task) {
