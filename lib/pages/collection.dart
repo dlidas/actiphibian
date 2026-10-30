@@ -392,7 +392,12 @@ class _AmphibianIconState extends State<AmphibianIcon> {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _showInfo,
-      icon: Image.asset('assets/images/${widget.amphibian.filePath}'),
+      //Names the amphibian for screen readers and on long press
+      tooltip: widget.amphibian.name,
+      icon: Image.asset(
+        'assets/images/${widget.amphibian.filePath}',
+        semanticLabel: widget.amphibian.name,
+      ),
     );
   }
 }

@@ -1104,6 +1104,7 @@ class _NewTasksState extends State<NewTasks> {
               ],
             ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Add task',
         onPressed: _isLoading ? null : _showAddTaskDialog,
         child: const Icon(Icons.add),
       ),
