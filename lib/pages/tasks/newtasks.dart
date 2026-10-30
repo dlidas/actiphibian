@@ -819,6 +819,31 @@ class _NewTasksState extends State<NewTasks> {
         !_isTaskInteractable(task, DateTime.now())) {
       return;
     }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this task?'),
+        content: Text(
+          '"${task.description.isEmpty ? '(untitled task)' : task.description}" '
+          'will be removed. You cannot undo this.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep it'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     try {
       await LocalDb.deleteTask(taskId);
       if (!mounted) return;
