@@ -164,13 +164,33 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   Timer? _missedCheckTimer;
+  Set<int?> _lockedTaskIds = {};
+
+  Set<int?> _currentLockedTaskIds(DateTime now) => {
+    for (final task in _tasks)
+      if (task.status == 'active' && !_isTaskInteractable(task, now)) task.id,
+  };
+
+  // Redraw when a repeating task opens, so its card drops the lock icon.
+  void _refreshLockedTasks() {
+    // The timer can fire once more after dispose().
+    if (!mounted) return;
+    final locked = _currentLockedTaskIds(DateTime.now());
+    if (locked.length == _lockedTaskIds.length &&
+        locked.containsAll(_lockedTaskIds)) {
+      return;
+    }
+    setState(() => _lockedTaskIds = locked);
+  }
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _missedCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!_isLoading) unawaited(_flagNewlyMissedTasks());
+      if (_isLoading) return;
+      _refreshLockedTasks();
+      unawaited(_flagNewlyMissedTasks());
     });
   }
 
@@ -993,6 +1013,7 @@ class _NewTasksState extends State<NewTasks> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    _lockedTaskIds = _currentLockedTaskIds(now);
     final progress = _progress;
     final today = TaskLabels.todaySummary(_tasks, now);
 
