@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'login.dart';
 import 'pages/pages.dart';
 import 'package:provider/provider.dart';
+import 'services/focus_session_controller.dart';
 import 'services/user_progress.dart';
 import 'widgets/user_stats_app_bar.dart';
 
@@ -20,8 +21,14 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UserManager(user: User.newUser()),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => UserManager(user: User.newUser()),
+        ),
+        //Keeps a running focus session alive while the user switches tabs
+        ChangeNotifierProvider(create: (context) => FocusSessionController()),
+      ],
       child: Init(isNewUser: isNewUser),
     ),
   );

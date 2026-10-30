@@ -14,6 +14,8 @@ class DistractionTrackerService with WidgetsBindingObserver {
 
   void initialize() {
     _tracking = true;
+    // Observers are kept in a list, so remove first to never register twice
+    WidgetsBinding.instance.removeObserver(this);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -34,8 +36,10 @@ class DistractionTrackerService with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_tracking) return;
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    // Count only when the app goes to the background. "inactive" also fires
+    // for the notification panel and fires before "paused", which counted
+    // one visit twice.
+    if (state == AppLifecycleState.paused) {
       _distractions++;
       onDistractionDetected();
     }

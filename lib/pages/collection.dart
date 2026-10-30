@@ -121,13 +121,13 @@ class _CollectionPageState extends State<CollectionPage> {
                         LocalDb.updateUser(user);
                         context.read<UserManager>().updateUser(user);
                       },
-                      child: (amphibian == null) ? const Text('Roll for a new amphibian (\$50)'):
-                        const Text('Roll again! (\$50)'),
+                      child: (amphibian == null) ? const Text('Roll for a new amphibian (50 coins)'):
+                        const Text('Roll again! (50 coins)'),
                     ): Column(//Insufficient Funds button
                       children: [
                         ElevatedButton(
                           onPressed: null, 
-                          child: const Text('Insufficient funds! (\$50)'),
+                          child: const Text('Not enough coins (50 needed)'),
                         ),
                         Padding(
                           padding: EdgeInsetsGeometry.symmetric(horizontal: 25, vertical: 10),
@@ -352,8 +352,13 @@ class _AmphibianIconState extends State<AmphibianIcon> {
                                     fontSize: 20,
                                   ),
                                 ),
-                                Scrollable(
-                                  viewportBuilder: (context, position) => Padding(
+                                //Long descriptions scroll inside the dialog
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight:
+                                        MediaQuery.of(context).size.height * 0.4,
+                                  ),
+                                  child: SingleChildScrollView(
                                     padding: EdgeInsetsGeometry.all(15),
                                     child: Text(
                                       widget.amphibian.description,
@@ -387,7 +392,12 @@ class _AmphibianIconState extends State<AmphibianIcon> {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _showInfo,
-      icon: Image.asset('assets/images/${widget.amphibian.filePath}'),
+      //Names the amphibian for screen readers and on long press
+      tooltip: widget.amphibian.name,
+      icon: Image.asset(
+        'assets/images/${widget.amphibian.filePath}',
+        semanticLabel: widget.amphibian.name,
+      ),
     );
   }
 }

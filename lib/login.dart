@@ -15,6 +15,48 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   String _username = '';
+  bool _isSaving = false;
+
+  bool get _canSubmit => _username.trim().isNotEmpty && !_isSaving;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getStarted() async {
+    if (!_canSubmit) return;
+    setState(() => _isSaving = true);
+
+    //Create user model with given username
+    User user = User.newUser();
+    user.username = _username.trim();
+
+    //Update shared user
+    Provider.of<UserManager>(context, listen: false).updateUser(user);
+
+    //Save user to local db before the main page reads it
+    try {
+      await LocalDb.addUser(user);
+    } catch (error, stackTrace) {
+      debugPrint('Could not save the new user: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save your name. Try again.')),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    //Send to Home page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => MainApp()),
+    );
+  }
 
 
   @override
@@ -57,9 +99,14 @@ class _LoginPageState extends State<LoginPage> {
               padding: EdgeInsetsGeometry.symmetric(horizontal: 15),
               child: TextField(
                 controller: _usernameController,
+                maxLength: 30,
+                textInputAction: TextInputAction.done,
+                onChanged: (value) => setState(() => _username = value),
+                onSubmitted: (_) => _getStarted(),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Username',
+                  helperText: 'Enter a name to get started',
                 ),
               ),
             ),
@@ -74,6 +121,9 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.disabled)) {
+                          return Theme.of(context).colorScheme.primary.withAlpha(90);
+                        }
                         if (states.contains(WidgetState.pressed)) {
                           return Theme.of(context).colorScheme.tertiary;
                         }
@@ -87,26 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                         fontSize: 20,
                       ),
                     ),
-                    onPressed: () async {
-                      //Extract user input
-                      setState(() {
-                        _username = _usernameController.text;
-                      });
-
-                      //Create user model with given username
-                      User user = User.newUser();
-                      user.username = _username;
-
-                      // //Update shared user
-                      Provider.of<UserManager>(context, listen: false).updateUser(user);
-
-                      //Save user to local db
-                      LocalDb.addUser(Provider.of<UserManager>(context, listen: false).user);
-
-                      //Send to Home page
-                      Navigator.pushReplacement(context, 
-                        MaterialPageRoute(builder: (context) => MainApp()));
-                    },
+                    onPressed: _canSubmit ? _getStarted : null,
                   )
                 ),
               ),

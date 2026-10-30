@@ -128,11 +128,13 @@ class _NewTasksState extends State<NewTasks> {
     }
   }
 
+  // Logs the technical error and shows the user a plain message.
   void _reportDatabaseError(String message, Object error) {
+    debugPrint('$message: $error');
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('$message: $error')));
+    ).showSnackBar(SnackBar(content: Text('$message. Please try again.')));
   }
 
   void _saveTaskSilently(Task task) {
@@ -162,13 +164,33 @@ class _NewTasksState extends State<NewTasks> {
   }
 
   Timer? _missedCheckTimer;
+  Set<int?> _lockedTaskIds = {};
+
+  Set<int?> _currentLockedTaskIds(DateTime now) => {
+    for (final task in _tasks)
+      if (task.status == 'active' && !_isTaskInteractable(task, now)) task.id,
+  };
+
+  // Redraw when a repeating task opens, so its card drops the lock icon.
+  void _refreshLockedTasks() {
+    // The timer can fire once more after dispose().
+    if (!mounted) return;
+    final locked = _currentLockedTaskIds(DateTime.now());
+    if (locked.length == _lockedTaskIds.length &&
+        locked.containsAll(_lockedTaskIds)) {
+      return;
+    }
+    setState(() => _lockedTaskIds = locked);
+  }
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _missedCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (!_isLoading) unawaited(_flagNewlyMissedTasks());
+      if (_isLoading) return;
+      _refreshLockedTasks();
+      unawaited(_flagNewlyMissedTasks());
     });
   }
 
@@ -819,6 +841,31 @@ class _NewTasksState extends State<NewTasks> {
         !_isTaskInteractable(task, DateTime.now())) {
       return;
     }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this task?'),
+        content: Text(
+          '"${task.description.isEmpty ? '(untitled task)' : task.description}" '
+          'will be removed. You cannot undo this.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep it'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     try {
       await LocalDb.deleteTask(taskId);
       if (!mounted) return;
@@ -928,6 +975,25 @@ class _NewTasksState extends State<NewTasks> {
     );
   }
 
+  // Tells the user why a task card did not open, instead of doing nothing.
+  void _explainLockedTask(Task task) {
+    final now = DateTime.now();
+    final deadline = task.deadline;
+    String? message;
+    if (task.status == 'missed') {
+      message = 'This task was missed, so it can no longer be changed.';
+    } else if (task.isRecurring && deadline != null && now.isBefore(deadline)) {
+      message =
+          'This repeating task opens on ${TaskLabels.deadlineLabel(deadline)}.';
+    }
+    // An expired one-off task is marked as failed, which shows its own message.
+    unawaited(_flagNewlyMissedTasks());
+    if (message == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _openCalendar() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -947,6 +1013,7 @@ class _NewTasksState extends State<NewTasks> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    _lockedTaskIds = _currentLockedTaskIds(now);
     final progress = _progress;
     final today = TaskLabels.todaySummary(_tasks, now);
 
@@ -961,14 +1028,19 @@ class _NewTasksState extends State<NewTasks> {
     Widget cardFor(Task task) => TaskCard(
       task: task,
       now: now,
+      isLocked: task.status == 'active' && !_isTaskInteractable(task, now),
       onToggleComplete: () {
         if (_isTaskInteractable(task, DateTime.now())) {
           _requestComplete(task.id!);
+        } else {
+          _explainLockedTask(task);
         }
       },
       onOpen: () {
         if (_canOpenTask(task, DateTime.now())) {
           _openTaskDetails(task.id!);
+        } else {
+          _explainLockedTask(task);
         }
       },
     );
@@ -1053,6 +1125,7 @@ class _NewTasksState extends State<NewTasks> {
               ],
             ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Add task',
         onPressed: _isLoading ? null : _showAddTaskDialog,
         child: const Icon(Icons.add),
       ),

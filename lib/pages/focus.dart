@@ -1,12 +1,8 @@
-import 'dart:async';
-import 'package:actiphibian/data/repo.dart';
 import 'package:actiphibian/data/user_manager.dart';
-import 'package:actiphibian/models/focus_session.dart';
-import 'package:actiphibian/services/user_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/focus_xp.dart';
-import '../services/distraction_tracker.dart';
+import '../services/focus_session_controller.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -16,55 +12,27 @@ class FocusPage extends StatefulWidget {
 }
 
 class _FocusPageState extends State<FocusPage> {
-  // Instance of distraction tracker
-  late final DistractionTrackerService _tracker;
-
-  // Focus timer duration state
-  int _minutes = 20;
-  int _seconds = 0;
-  int _secondsRemaining = 1200; // 20 minutes default
-  int _focusedSeconds = 0;
-  int _initialSessionMinutes = 20; // Tracks starting time for Ovayo's calculation
-  Timer? _timer;
-  bool _isRunning = false;
   bool _showingRewardDialog = false;
 
-  // Distraction tracking
-  int _distractions = 0;
-  DateTime? _sessionStartedAt;
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _tracker.dispose();
-    super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _tracker = DistractionTrackerService(
-      onDistractionDetected: () {
-        setState(() {
-          _distractions = _tracker.distractions;
-        });
-      },
-    );
-  }
+  FocusSessionController get _session =>
+      context.read<FocusSessionController>();
 
   // Set Focus Timer Dialog (The Middle Wireframe Page)
   Future<void> _showSetFocusTimerDialog() async {
     TextEditingController minController = TextEditingController(
-      text: _minutes.toString().padLeft(2, '0'),
+      text: _session.minutes.toString().padLeft(2, '0'),
     );
     TextEditingController secController = TextEditingController(
-      text: _seconds.toString().padLeft(2, '0'),
+      text: _session.seconds.toString().padLeft(2, '0'),
     );
+
+    String? timeError;
 
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.secondary,
           shape: RoundedRectangleBorder(
@@ -82,13 +50,13 @@ class _FocusPageState extends State<FocusPage> {
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'Set Focus Timer',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -113,6 +81,10 @@ class _FocusPageState extends State<FocusPage> {
                         child: TextField(
                           controller: minController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(3),
+                          ],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 28,
@@ -135,6 +107,10 @@ class _FocusPageState extends State<FocusPage> {
                         child: TextField(
                           controller: secController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(2),
+                          ],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 28,
@@ -148,6 +124,14 @@ class _FocusPageState extends State<FocusPage> {
                     ],
                   ),
                 ),
+                if (timeError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    timeError!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Action Buttons: Cancel & OK
@@ -170,20 +154,20 @@ class _FocusPageState extends State<FocusPage> {
                         int parsedMins = int.tryParse(minController.text) ?? 0;
                         int parsedSecs = int.tryParse(secController.text) ?? 0;
 
-                        setState(() {
-                          _minutes = parsedMins;
-                          _seconds = parsedSecs;
-                          _initialSessionMinutes = parsedMins > 0
-                              ? parsedMins
-                              : 1;
-                          _secondsRemaining = (parsedMins * 60) + parsedSecs;
-                        });
+                        final error = _focusTimeError(parsedMins, parsedSecs);
+                        if (error != null) {
+                          setDialogState(() => timeError = error);
+                          return;
+                        }
+                        _session.setDuration(parsedMins, parsedSecs);
 
                         Navigator.pop(context);
                       },
-                      child: const Text(
+                      child: Text(
                         'OK',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -192,186 +176,151 @@ class _FocusPageState extends State<FocusPage> {
             ),
           ),
         );
-      },
+        },
+      ),
     );
   }
 
+  static const int _maxFocusMinutes = 180;
+
+  //Returns a message when the entered time cannot be used
+  String? _focusTimeError(int minutes, int seconds) {
+    if (seconds > 59) return 'Seconds must be between 0 and 59.';
+    if (minutes == 0 && seconds == 0) return 'Set a time longer than zero.';
+    if (minutes > _maxFocusMinutes ||
+        (minutes == _maxFocusMinutes && seconds > 0)) {
+      return 'A session can be at most $_maxFocusMinutes minutes.';
+    }
+    return null;
+  }
+
   void _toggleTimer() {
-    if (_isRunning) {
-      _timer?.cancel();
-      _tracker.dispose();
-      setState(() => _isRunning = false);
-    } else {
-      if (_secondsRemaining <= 0) {
-        _secondsRemaining = (_minutes * 60) + _seconds;
-      }
-      if (_sessionStartedAt == null) {
-        _focusedSeconds = 0;
-      }
-      _sessionStartedAt ??= DateTime.now();
+    _session.toggle(context.read<UserManager>());
+  }
 
-      _tracker.reset();
-      _tracker.initialize();
-
-      _isRunning = true;
-
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_secondsRemaining > 0) {
-          setState(() {
-            _secondsRemaining--;
-            _focusedSeconds++;
-          });
-        } else {
-          timer.cancel();
-          setState(() => _isRunning = false);
-          _onTimerCompleted();
-        }
-      });
+  Future<void> _confirmEndSession() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('End this session?'),
+        content: const Text(
+          'The timer will reset and you will not earn XP or coins for this session.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep going'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('End session'),
+          ),
+        ],
+      ),
+    );
+    // The timer may have finished while this dialog was open
+    if (confirmed == true && mounted && _session.hasActiveSession) {
+      _session.endSession();
     }
   }
 
-  // Triggered automatically when the timer finishes
-  Future<void> _onTimerCompleted() async {
-    if (_showingRewardDialog) return;
+  //Show the reward dialog once, when this page is visible
+  void _showPendingReward(FocusReward? reward) {
+    if (reward == null || _showingRewardDialog) return;
     _showingRewardDialog = true;
-
-    // Stop distraction tracking when timer completes
-    _tracker.dispose();
-
-    final startedAt = _sessionStartedAt ?? DateTime.now();
-    _sessionStartedAt = null;
-    final focusedMinutes = _focusedSeconds ~/ 60;
-    final effectiveMinutes = focusedMinutes > 0 ? focusedMinutes : _initialSessionMinutes;
-
-    try {
-      final sessions = await LocalDb.getFocusSessions();
-      final earnedXP = FocusXp.xpForSession(
-        focusedMinutes: effectiveMinutes,
-        focusMinutesToday: FocusXp.focusMinutesOnDay(sessions, startedAt),
-      );
-      
-      final session = FocusSession(
-        methodId: 'timer',
-        startedAt: startedAt,
-        focusedMinutes: effectiveMinutes,
-        xpAwarded: earnedXP,
-      );
-      await LocalDb.addFocusSession(session);
-
-      final tasks = await LocalDb.getTasks();
-      if (!mounted) return;
-      
-      final currentUser = context.read<UserManager>().user;
-      final progress = UserProgress.fromTasks(
-        tasks,
-        now: DateTime.now(),
-        focusSessions: [...sessions, session],
-      );
-      
-      final previousBalance = currentUser.balance;
-      context.read<UserManager>().updateProgress(
-        level: progress.level,
-        xp: progress.totalXp,
-        balance: progress.coins,
-      );
-
-      final earnedCoins = progress.coins - previousBalance;
-      final earnedCoinsSafe = earnedCoins > 0 ? earnedCoins : (earnedXP / 10).floor();
-
-      if (!mounted) return;
-      _showAwardDialog(earnedXP, earnedCoinsSafe);
-    } catch (error, stackTrace) {
-      debugPrint('Could not save focus session rewards: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      if (!mounted) return;
-      
-      // Fallback display
-      int earnedXP = FocusXp.xpForSession(focusedMinutes: _initialSessionMinutes, focusMinutesToday: 0);
-      int earnedCoins = (earnedXP / 10).floor();
-      _showAwardDialog(earnedXP, earnedCoins);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        _showingRewardDialog = false;
+        return;
+      }
+      _showAwardDialog(reward.xp, reward.coins, reward.distractions);
+    });
   }
 
-  void _showAwardDialog(int xpEarned, int coinsEarned) {
+  void _showAwardDialog(int xpEarned, int coinsEarned, int distractions) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Session Completed!',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D3B00),
+        // The back button must not close it, or the reward is never claimed
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Earned XP: +$xpEarned XP',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+            title: const Text(
+              'Session Completed!',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D3B00),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Earned Coins: +$coinsEarned Coins',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Earned XP: +$xpEarned XP',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              if (_distractions > 0) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Distractions logged: $_distractions',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  'Earned Coins: +$coinsEarned Coins',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                if (distractions > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Times you left the app: $distractions',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
               ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () {
+                  _showingRewardDialog = false;
+                  Navigator.of(dialogContext).pop();
+
+                  _session.claimReward();
+                },
+                child: Text(
+                  'Claim Rewards',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                ),
+              ),
             ],
           ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: () {
-                _showingRewardDialog = false;
-                Navigator.of(dialogContext).pop();
-
-                setState(() {
-                  _secondsRemaining = (_minutes * 60) + _seconds;
-                  _isRunning = false;
-                  _distractions = 0;
-                });
-              },
-              child: const Text(
-                'Claim Rewards',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
         );
       },
     );
   }
 
-  String _formattedTime() {
-    int m = _secondsRemaining ~/ 60;
-    int s = _secondsRemaining % 60;
+  String _formattedTime(int secondsRemaining) {
+    int m = secondsRemaining ~/ 60;
+    int s = secondsRemaining % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<UserManager>().user;
+    final session = context.watch<FocusSessionController>();
+    _showPendingReward(session.pendingReward);
     return Scaffold(
       body: Center(
         child: Padding(
@@ -411,8 +360,9 @@ class _FocusPageState extends State<FocusPage> {
               ),
               const SizedBox(height: 20),
               Chip(
+                avatar: const Icon(Icons.phone_iphone, size: 18),
                 label: Text(
-                  'Auto Distractions: $_distractions',
+                  'Times you left the app: ${session.distractions}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -422,7 +372,7 @@ class _FocusPageState extends State<FocusPage> {
               ),
               const SizedBox(height: 20),
               Text(
-                _formattedTime(),
+                _formattedTime(session.secondsRemaining),
                 style: const TextStyle(
                   fontSize: 54,
                   fontWeight: FontWeight.bold,
@@ -432,7 +382,7 @@ class _FocusPageState extends State<FocusPage> {
 
               // Button to trigger the Set Focus Timer dialog
               Tooltip(
-                message: _sessionStartedAt == null
+                message: !session.hasActiveSession
                     ? 'Set the focus timer'
                     : 'Timer settings are locked until this session ends',
                 child: ElevatedButton.icon(
@@ -444,7 +394,7 @@ class _FocusPageState extends State<FocusPage> {
                       vertical: 12,
                     ),
                   ),
-                  onPressed: _sessionStartedAt == null
+                  onPressed: !session.hasActiveSession
                       ? _showSetFocusTimerDialog
                       : null,
                   label: const Text('Set Focus Timer'),
@@ -459,8 +409,15 @@ class _FocusPageState extends State<FocusPage> {
                 children: [
                   ElevatedButton(
                     onPressed: _toggleTimer,
-                    child: Text(_isRunning ? 'Pause' : 'Start'),
+                    child: Text(session.isRunning ? 'Pause' : 'Start'),
                   ),
+                  if (session.hasActiveSession) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: _confirmEndSession,
+                      child: const Text('End'),
+                    ),
+                  ],
                 ],
               ),
             ],

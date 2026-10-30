@@ -7,6 +7,9 @@ class TaskCard extends StatelessWidget {
   final DateTime now;
   final VoidCallback onToggleComplete;
   final VoidCallback onOpen;
+  // True when an active task cannot be changed yet, such as a repeating task
+  // before its first due time.
+  final bool isLocked;
 
   const TaskCard({
     super.key,
@@ -14,6 +17,7 @@ class TaskCard extends StatelessWidget {
     required this.now,
     required this.onToggleComplete,
     required this.onOpen,
+    this.isLocked = false,
   });
 
   @override
@@ -21,10 +25,10 @@ class TaskCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final stage = TaskLabels.stageOf(task);
     final background = _backgroundFor(stage, cs);
+    // Missed tasks cannot be completed, so they get no complete button.
     final canComplete =
-        stage == TaskStage.inProgress ||
-        stage == TaskStage.notStarted ||
-        stage == TaskStage.missed;
+        !isLocked &&
+        (stage == TaskStage.inProgress || stage == TaskStage.notStarted);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -92,6 +96,8 @@ class TaskCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 if (stage == TaskStage.done)
                   _XpChip(text: TaskLabels.xpChip(task))
+                else if (isLocked || stage == TaskStage.missed)
+                  Icon(Icons.lock_outline, color: cs.secondary, size: 20)
                 else
                   Icon(Icons.chevron_right, color: cs.secondary),
               ],

@@ -90,8 +90,16 @@ class TaskLabels {
     final parts = <String>[];
     final duration = durationLabel(task.durationMinutes);
     if (duration.isNotEmpty) parts.add(duration);
-    final overdue = task.deadline != null && task.deadline!.isBefore(now);
-    parts.add(overdue ? 'Overdue' : 'Not started');
+    final deadline = task.deadline;
+    if (task.isRecurring && deadline != null) {
+      // A repeating task opens at its due time and stays open until the next one.
+      parts.add(
+        deadline.isAfter(now) ? 'Opens ${deadlineLabel(deadline)}' : 'Ready',
+      );
+    } else {
+      final overdue = deadline != null && deadline.isBefore(now);
+      parts.add(overdue ? 'Overdue' : 'Not started');
+    }
     return parts.join(' · ');
   }
 
